@@ -22,8 +22,8 @@ const WIND_VOLUME_LERP_SPEED = 10;
 const MENU_BOB_SPEED = 1;
 const MENU_BOB_AMOUNT = 0.15;
 
-const MOUSE_SENSITIVITY = 0.4; // degrees per pixel of mouse delta, tune to taste
-const MAX_PITCH = 80; // degrees, clamp looking up/down
+const MOUSE_SENSITIVITY = 0.4;
+const MAX_PITCH = 80;
 
 export class FirstPersonLock {
     private player = Players.LocalPlayer;

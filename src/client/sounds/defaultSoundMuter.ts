@@ -25,7 +25,6 @@ export class DefaultSoundMuter {
             }
         }
 
-        // Roblox recreates these sounds automatically, so watch for them
         root.ChildAdded.Connect((child) => {
             if (child.IsA("Sound") && DEFAULT_SOUND_NAMES.includes(child.Name)) {
                 child.Volume = 0;

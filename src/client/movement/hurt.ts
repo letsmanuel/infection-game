@@ -113,7 +113,6 @@ export class FallDamageModule {
 
         const landedInWater = this.isLandingInWater();
 
-        // Only play landing sound if fall exceeds the sound threshold
         if (fallDistance >= LAND_SOUND_THRESHOLD) {
             this.playSpecificSound("LandEffect", landedInWater ? "water" : "everything");
         }
@@ -122,26 +121,20 @@ export class FallDamageModule {
             return;
         }
 
-        // Damage (reduced if landing in water)
         const damage = landedInWater ? FALL_DAMAGE_AMOUNT * WATER_FALL_DAMAGE_MULTIPLIER : FALL_DAMAGE_AMOUNT;
         this.humanoid.TakeDamage(damage);
 
-        // Play random hurt sound with random pitch
         this.playRandomSoundFromFolder("HurtEffect");
 
-        // Force crouch
         this.crouchModule?.setCrouching(true);
 
-        // Slow down
         this.preStandWalkSpeed = this.humanoid.WalkSpeed > SLOWED_WALK_SPEED
             ? this.humanoid.WalkSpeed
             : this.preStandWalkSpeed;
         this.humanoid.WalkSpeed = SLOWED_WALK_SPEED;
 
-        // Tilt camera down
         this.targetCamTiltOffset = CAM_DOWN_ANGLE;
 
-        // Start recovery timer
         this.inRecoveryState = true;
         this.recoveryTimer = 0;
     }

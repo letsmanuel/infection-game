@@ -47,11 +47,9 @@ export class AmbientMusicModule {
         sound.Volume = 0;
         sound.Play();
 
-        // Fade in
         this.fade(sound, 0, TARGET_VOLUME, FADE_IN_TIME);
         if (!this.running || this.currentSound !== sound) return;
 
-        // Determine how long this track plays before fading out
         let playDuration = MAX_PLAY_TIME;
 
         if (math.random() < EARLY_FADE_CHANCE) {
@@ -59,19 +57,16 @@ export class AmbientMusicModule {
                 + math.random() * (MAX_PLAY_TIME - MIN_PLAY_TIME_BEFORE_EARLY_FADE - FADE_OUT_TIME);
         }
 
-        // Account for fade-in time already spent, and leave room for fade-out
         const remainingPlayTime = math.max(playDuration - FADE_IN_TIME - FADE_OUT_TIME, 0);
 
-        // Wait out the hold period, but bail early if the sound naturally finished
         const holdStart = os.clock();
         while (this.running && this.currentSound === sound && (os.clock() - holdStart) < remainingPlayTime) {
-            if (!sound.IsPlaying) break; // sound finished naturally before we hit our target duration
+            if (!sound.IsPlaying) break;
             task.wait(0.1);
         }
 
         if (!this.running || this.currentSound !== sound) return;
 
-        // Fade out
         this.fade(sound, sound.Volume, 0, FADE_OUT_TIME);
 
         if (this.currentSound === sound) {

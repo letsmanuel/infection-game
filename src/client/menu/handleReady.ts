@@ -26,10 +26,10 @@ export class handleReady {
             this.toggleState = !this.toggleState;
             if (this.toggleState) {
                 readyButton.Text = "Ready!";
-                cameraLight.Color = Color3.fromRGB(0, 255, 0); // Green light
+                cameraLight.Color = Color3.fromRGB(0, 255, 0);
             } else {
                 readyButton.Text = "Ready up";
-                cameraLight.Color = Color3.fromRGB(255, 255, 255); // Red light
+                cameraLight.Color = Color3.fromRGB(255, 255, 255);
             }
 
         });

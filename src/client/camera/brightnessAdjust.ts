@@ -1,11 +1,11 @@
 // BrightnessAdjustModule.ts
 import { Players, RunService, Workspace, Lighting } from "@rbxts/services";
 
-const BRIGHT_COLOR = Color3.fromRGB(68, 68, 68); // fully adjusted / indoor brightness
-const DARK_COLOR = Color3.fromRGB(44, 44, 44); // freshly-exited-bright-area darkness
+const BRIGHT_COLOR = Color3.fromRGB(68, 68, 68);
+const DARK_COLOR = Color3.fromRGB(44, 44, 44);
 
-const ADJUST_DURATION = 10; // seconds to adjust from dark back to bright
-const CHECK_INTERVAL = 0.2; // how often to check zone overlap
+const ADJUST_DURATION = 10;
+const CHECK_INTERVAL = 0.2;
 
 export class BrightnessAdjustModule {
     private player = Players.LocalPlayer;
@@ -33,7 +33,6 @@ export class BrightnessAdjustModule {
         if (this.player.Character) setup(this.player.Character);
         this.charAddedConn = this.player.CharacterAdded.Connect(setup);
 
-        // Assume we start "indoor"/bright so there's no false adjustment on spawn
         this.wasIndoor = true;
         this.currentAmbient = BRIGHT_COLOR;
         Lighting.Ambient = this.currentAmbient;
@@ -71,14 +70,21 @@ export class BrightnessAdjustModule {
             const nowIndoor = this.isIndoor();
 
             if (nowIndoor && !this.wasIndoor) {
-                // Entered a bright area: snap to bright immediately, no adjustment needed
                 print("Entered bright area, snapping to bright");
                 this.adjusting = false;
                 this.currentAmbient = BRIGHT_COLOR;
                 Lighting.Ambient = this.currentAmbient;
+
+                Lighting.EnvironmentDiffuseScale = .6;
+                Lighting.EnvironmentSpecularScale = 0;
+
             } else if (!nowIndoor && this.wasIndoor) {
-                // Left a bright area into the dark: start dark, begin adjusting
                 print("Left bright area, starting dark and adjusting");
+                
+                Lighting.EnvironmentDiffuseScale = 1; 
+                Lighting.EnvironmentSpecularScale = 1;
+
+
                 this.currentAmbient = DARK_COLOR;
                 Lighting.Ambient = this.currentAmbient;
                 this.adjusting = true;
