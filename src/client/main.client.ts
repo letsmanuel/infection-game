@@ -14,6 +14,8 @@ import { BrightnessAdjustModule } from "./camera/brightnessAdjust";
 import { handleReady } from "./menu/handleReady";
 import { InteractWithFan } from "./enviroment/interactWithFan";
 import { PickupClient } from "./movement/pickup";
+import { HighlightRemover } from "./enviroment/highlightRemover";
+import { OldShopHandler } from "./menu/handleShopOld";
 
 const LIGHTING_TIME = "20:00:00";
 Lighting.TimeOfDay = LIGHTING_TIME;
@@ -57,9 +59,17 @@ interactWithFan.start();
 const pickupClient = new PickupClient();
 pickupClient.start();
 
+const highlightRemover = new HighlightRemover();
+highlightRemover.start();
+
+const oldShopHandler = new OldShopHandler();
+oldShopHandler.start(); 
+
 print(sayStarted("main.client.ts"));
 
-wait(2);
-print("order up everybody");
-wait(3);
-Remotes.Client.Get("placeOrder").SendToServer("templateBox");
+
+// TESTING
+//wait(2);
+//print("order up everybody");
+//wait(3);
+//Remotes.Client.Get("placeOrder").SendToServer("BearTrap");

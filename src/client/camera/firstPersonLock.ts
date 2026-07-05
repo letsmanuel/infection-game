@@ -37,6 +37,7 @@ export class FirstPersonLock {
     private connection?: RBXScriptConnection;
     private inputConnection?: RBXScriptConnection;
     private attributeChangedConn?: RBXScriptConnection;
+    private shopAttrConn?: RBXScriptConnection;
 
     private mouseLocked = true;
 
@@ -71,8 +72,9 @@ export class FirstPersonLock {
         this.inputConnection = UserInputService.InputChanged.Connect((input) => {
             if (input.UserInputType === Enum.UserInputType.MouseMovement) {
                 const gameStarted = this.player.GetAttribute("gameStarted") === true;
+                const inShop = this.player.GetAttribute("_shopOpen") === true;
 
-                if (gameStarted && this.mouseLocked) {
+                if (gameStarted && this.mouseLocked && !inShop) {
                     this.yaw -= input.Delta.X * MOUSE_SENSITIVITY;
                     this.pitch = math.clamp(
                         this.pitch - input.Delta.Y * MOUSE_SENSITIVITY,
@@ -109,7 +111,8 @@ export class FirstPersonLock {
         UserInputService.InputBegan.Connect((input, gameProcessed) => {
             if (gameProcessed) return;
             if (input.KeyCode === Enum.KeyCode.Tab) {
-                if (this.player.GetAttribute("gameStarted") === true) {
+                const inShop = this.player.GetAttribute("_shopOpen") === true;
+                if (this.player.GetAttribute("gameStarted") === true && !inShop) {
                     this.toggleMouseLock();
                 }
             }
@@ -120,12 +123,16 @@ export class FirstPersonLock {
         this.attributeChangedConn = this.player.GetAttributeChangedSignal("gameStarted").Connect(() => {
             this.applyMouseStateForCurrentMode();
         });
+        this.shopAttrConn = this.player.GetAttributeChangedSignal("_shopOpen").Connect(() => {
+            this.applyMouseStateForCurrentMode();
+        });
     }
 
     private applyMouseStateForCurrentMode() {
         const gameStarted = this.player.GetAttribute("gameStarted") === true;
+        const inShop = this.player.GetAttribute("_shopOpen") === true;
 
-        if (gameStarted) {
+        if (gameStarted && !inShop) {
             if (this.mouseLocked) {
                 UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition;
                 UserInputService.MouseIconEnabled = false;
@@ -200,11 +207,14 @@ export class FirstPersonLock {
 
     private update(dt: number, humanoid: Humanoid) {
         const gameStarted = this.player.GetAttribute("gameStarted") === true;
+        const inShop = this.player.GetAttribute("_shopOpen") === true;
 
         if (!gameStarted) {
             this.updateMenuCamera(dt);
             return;
         }
+
+        if (inShop) return;
 
         const character = humanoid.Parent as Model;
         const head = character.FindFirstChild("Head") as BasePart | undefined;
@@ -285,6 +295,7 @@ export class FirstPersonLock {
         this.connection?.Disconnect();
         this.inputConnection?.Disconnect();
         this.attributeChangedConn?.Disconnect();
+        this.shopAttrConn?.Disconnect();
         UserInputService.MouseIconEnabled = true;
         UserInputService.MouseBehavior = Enum.MouseBehavior.Default;
     }

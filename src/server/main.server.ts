@@ -10,6 +10,7 @@ depthOfField.Enabled = true;
 import { ReadySystem } from "./readySystem/readySystem";
 import { OrderHandler } from "./orderHandler";
 import { FanStatus } from "./enviroment/fanStatus";
+import { SpecialCode } from "./enviroment/specialCode";
 
 const fanStatusHandler = new FanStatus();
 fanStatusHandler.start();
@@ -19,6 +20,9 @@ readySystem.start();
 
 const deliverySystem = new OrderHandler();
 deliverySystem.start();
+
+const specialCodeSystem = new SpecialCode();
+specialCodeSystem.start();
 
 
 print(sayStarted("main.server.ts"));

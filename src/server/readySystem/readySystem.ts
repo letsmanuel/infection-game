@@ -48,11 +48,11 @@ export class ReadySystem {
             shuffled[j] = temp;
         }
 
-        const runnerCount = math.max(1, math.floor(shuffled.size() / 4));
+        const runnerCount = math.max(1, math.ceil(shuffled.size() / 2));
 
         shuffled.forEach((player, index) => {
             const role = index < runnerCount ? "Runner" : "Attacker";
-            player.SetAttribute("Role", role);
+            player.SetAttribute("role", role);
             print(`${player.Name} assigned role: ${role}`);
         });
     }

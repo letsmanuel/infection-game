@@ -3,6 +3,8 @@ import Remotes from "shared/remotes";
 import { DeliveryOptions } from "shared/configs/deliveryOptions";
 
 const orderRemote = Remotes.Server.Get("placeOrder");
+const checkAvailabilityRemote = Remotes.Server.Get("checkOrderAvailability");
+const availabilityResponse = Remotes.Server.Get("orderAvailabilityResponse");
 
 const orderAssetsFolder = ServerStorage.WaitForChild("DeliveryAssets") as Folder;
 const packageTemplate = orderAssetsFolder.WaitForChild("Package") as BasePart;
@@ -29,6 +31,27 @@ const FACING_CORRECTIONS: Record<string, CFrame> = {
 const SOUND_PATHS: Record<string, { driving?: string; honk?: string }> = {
     Van: { driving: ".driving", honk: ".honk" },
 };
+
+const CATEGORY_WINDOW = 60;
+const recentOrdersByCategory = new Map<string, number[]>();
+
+function canOrderCategory(category: string): boolean {
+    const now = os.clock();
+    let timestamps = recentOrdersByCategory.get(category);
+    if (!timestamps) return true;
+
+    timestamps = timestamps.filter((t) => now - t < CATEGORY_WINDOW);
+    recentOrdersByCategory.set(category, timestamps);
+
+    const limit = DeliveryOptions.CategoryLimits[category] ?? 999;
+    return timestamps.size() < limit;
+}
+
+function recordOrderCategory(category: string) {
+    const timestamps = recentOrdersByCategory.get(category) ?? [];
+    timestamps.push(os.clock());
+    recentOrdersByCategory.set(category, timestamps);
+}
 
 function getSortedWaypoints(routeFolder: Folder): Attachment[] {
     const waypoints = routeFolder.GetChildren().filter((c): c is Attachment => c.IsA("Attachment"));
@@ -150,7 +173,7 @@ function moveDelivererAlongRoute(
                     math.random() * (MAX_PACKAGE_HOVER_HEIGHT - MIN_PACKAGE_HOVER_HEIGHT);
 
                 const packageClone = packageTemplate.Clone();
-                packageClone.Name = productId;
+                packageClone.Name = "Package";
                 packageClone.Position = randomDropoffPoint.WorldPosition.add(
                     new Vector3(0, hoverHeight, 0),
                 );
@@ -176,12 +199,30 @@ function moveDelivererAlongRoute(
 
 export class OrderHandler {
     start() {
+        checkAvailabilityRemote.Connect((player) => {
+            const available = canOrderCategory("oldShop");
+            availabilityResponse.SendToPlayer(player, available);
+        });
+
         orderRemote.Connect((player, order) => {
+
+            if (player.GetAttribute("role") === "Attacker") {
+                print(`Player ${player.Name} attempted to place an order while being an Attacker.`);
+                return;
+            }
+
             const matchedProduct = DeliveryOptions.Products.find((p) => p.id === order);
             if (!matchedProduct) {
                 print(`Invalid order received from player ${player.Name}: ${order}`);
                 return;
             }
+
+            if (!canOrderCategory(matchedProduct.category)) {
+                print(`Rate limit hit for category "${matchedProduct.category}" by ${player.Name}`);
+                return;
+            }
+
+            recordOrderCategory(matchedProduct.category);
 
             const randomDeliveryMethod =
                 DeliveryOptions.Methods[math.random(0, DeliveryOptions.Methods.size() - 1)];

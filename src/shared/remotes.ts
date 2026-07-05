@@ -24,6 +24,15 @@ const Remotes = Net.CreateDefinitions({
     interactObject: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 30 })]),
     objectHeldChanged: Net.Definitions.ServerToClientEvent<[holder: Player, target: Instance | undefined]>(),
 
+    // placement system
+    requestPlace: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 15 })]),
+    confirmPlace: Net.Definitions.ClientToServerEvent<[cframe: CFrame]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 15 })]),
+    cancelPlace: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 15 })]),
+    placeGhostChanged: Net.Definitions.ServerToClientEvent<[ghost: Instance | undefined, placer: Player]>(),
+
+    // shop availability
+    checkOrderAvailability: Net.Definitions.ClientToServerEvent<[]>(),
+    orderAvailabilityResponse: Net.Definitions.ServerToClientEvent<[available: boolean]>(),
 });
 
 
