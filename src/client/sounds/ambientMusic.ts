@@ -1,0 +1,114 @@
+import { SoundService } from "@rbxts/services";
+
+const TARGET_VOLUME = 0.25;
+
+const FADE_IN_TIME = 5; // seconds
+const FADE_OUT_TIME = 5; // seconds
+
+const MAX_PLAY_TIME = 100; // seconds, absolute maximum before forced fade out
+const MIN_PLAY_TIME_BEFORE_EARLY_FADE = 30; // seconds, earliest a random early fade-out can happen
+const EARLY_FADE_CHANCE = 0.6; // 60% chance the track fades out early instead of running the full duration
+
+const MIN_WAIT_BETWEEN_TRACKS = 5; // seconds
+const MAX_WAIT_BETWEEN_TRACKS = 15; // seconds (centered around ~10s)
+
+export class AmbientMusicModule {
+    private running = false;
+    private currentSound?: Sound;
+    private loopThread?: thread;
+
+    start() {
+        if (this.running) return;
+        this.running = true;
+
+        this.loopThread = task.spawn(() => {
+            while (this.running) {
+                this.playRandomTrack();
+
+                if (!this.running) break;
+
+                const waitTime = MIN_WAIT_BETWEEN_TRACKS
+                    + math.random() * (MAX_WAIT_BETWEEN_TRACKS - MIN_WAIT_BETWEEN_TRACKS);
+                task.wait(waitTime);
+            }
+        });
+    }
+
+    private playRandomTrack() {
+        const folder = SoundService.FindFirstChild("AmbientMusic");
+        if (!folder) return;
+
+        const sounds = folder.GetChildren().filter((c) => c.IsA("Sound")) as Sound[];
+        if (sounds.size() === 0) return;
+
+        const sound = sounds[math.random(0, sounds.size() - 1)];
+        this.currentSound = sound;
+
+        sound.Volume = 0;
+        sound.Play();
+
+        // Fade in
+        this.fade(sound, 0, TARGET_VOLUME, FADE_IN_TIME);
+        if (!this.running || this.currentSound !== sound) return;
+
+        // Determine how long this track plays before fading out
+        let playDuration = MAX_PLAY_TIME;
+
+        if (math.random() < EARLY_FADE_CHANCE) {
+            playDuration = MIN_PLAY_TIME_BEFORE_EARLY_FADE
+                + math.random() * (MAX_PLAY_TIME - MIN_PLAY_TIME_BEFORE_EARLY_FADE - FADE_OUT_TIME);
+        }
+
+        // Account for fade-in time already spent, and leave room for fade-out
+        const remainingPlayTime = math.max(playDuration - FADE_IN_TIME - FADE_OUT_TIME, 0);
+
+        // Wait out the hold period, but bail early if the sound naturally finished
+        const holdStart = os.clock();
+        while (this.running && this.currentSound === sound && (os.clock() - holdStart) < remainingPlayTime) {
+            if (!sound.IsPlaying) break; // sound finished naturally before we hit our target duration
+            task.wait(0.1);
+        }
+
+        if (!this.running || this.currentSound !== sound) return;
+
+        // Fade out
+        this.fade(sound, sound.Volume, 0, FADE_OUT_TIME);
+
+        if (this.currentSound === sound) {
+            sound.Stop();
+            this.currentSound = undefined;
+        }
+    }
+
+    private fade(sound: Sound, fromVolume: number, toVolume: number, duration: number) {
+        const steps = math.max(math.floor(duration / 0.05), 1);
+        const stepTime = duration / steps;
+
+        for (let i = 1; i <= steps; i++) {
+            if (!this.running || this.currentSound !== sound) return;
+
+            const alpha = i / steps;
+            sound.Volume = fromVolume + (toVolume - fromVolume) * alpha;
+            task.wait(stepTime);
+        }
+
+        if (this.running && this.currentSound === sound) {
+            sound.Volume = toVolume;
+        }
+    }
+
+    stop() {
+        this.running = false;
+
+        if (this.currentSound) {
+            this.currentSound.Stop();
+            this.currentSound.Volume = 0;
+            this.currentSound = undefined;
+        }
+
+        if (this.loopThread) {
+            task.cancel(this.loopThread);
+            this.loopThread = undefined;
+        }
+    }
+}
