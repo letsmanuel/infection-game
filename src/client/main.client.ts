@@ -13,6 +13,7 @@ import { AmbientMusicModule } from "./sounds/ambientMusic";
 import { BrightnessAdjustModule } from "./camera/brightnessAdjust";
 import { handleReady } from "./menu/handleReady";
 import { InteractWithFan } from "./enviroment/interactWithFan";
+import { PickupClient } from "./movement/pickup";
 
 const LIGHTING_TIME = "20:00:00";
 Lighting.TimeOfDay = LIGHTING_TIME;
@@ -53,9 +54,12 @@ readyHandler.start();
 const interactWithFan = new InteractWithFan();
 interactWithFan.start();
 
+const pickupClient = new PickupClient();
+pickupClient.start();
+
 print(sayStarted("main.client.ts"));
 
-wait(30);
+wait(2);
 print("order up everybody");
 wait(3);
 Remotes.Client.Get("placeOrder").SendToServer("templateBox");

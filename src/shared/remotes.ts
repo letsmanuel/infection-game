@@ -17,6 +17,13 @@ const Remotes = Net.CreateDefinitions({
     //environment interactions
     startupFan: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 3 })]),
 
+
+    // dragging/pickup system
+    pickupObject: Net.Definitions.ClientToServerEvent<[target: Instance]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 30 })]),
+    dropObject: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 30 })]),
+    interactObject: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 30 })]),
+    objectHeldChanged: Net.Definitions.ServerToClientEvent<[holder: Player, target: Instance | undefined]>(),
+
 });
 
 
