@@ -34,18 +34,17 @@ export class handleReady {
 
         });
 
-        StartGameRemote.Connect((role) => {
-            print(`Game started! Your role is: ${role}`);
+        StartGameRemote.Connect(() => {
+            const player = Players.LocalPlayer;
 
-            const gui = Players.LocalPlayer.FindFirstChild("PlayerGui") as PlayerGui;
+            const gui = player.FindFirstChild("PlayerGui") as PlayerGui;
             const fadeGui = gui.WaitForChild("black") as ScreenGui;
             const frame = fadeGui.WaitForChild("Frame") as Frame;
             
             frame.Visible = true;
             frame.Transparency = 0;
 
-            Players.LocalPlayer.SetAttribute("role", role);
-            Players.LocalPlayer.SetAttribute("gameStarted", true);
+            player.SetAttribute("gameStarted", true);
             
             SoundService.FindFirstChildWhichIsA("Sound")?.Play();
 

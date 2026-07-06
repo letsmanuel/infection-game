@@ -83,6 +83,7 @@ export class CrouchModule {
     }
 
     private update(dt: number) {
+        if (this.player.GetAttribute("_rigCameraActive") === true) return;
         const targetY = this.crouching ? CROUCH_CAM_Y : STAND_CAM_Y;
         this.currentCamYOffset += (targetY - this.currentCamYOffset) * math.clamp(dt * CAM_LERP_SPEED, 0, 1);
 

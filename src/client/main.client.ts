@@ -16,6 +16,10 @@ import { InteractWithFan } from "./enviroment/interactWithFan";
 import { PickupClient } from "./movement/pickup";
 import { HighlightRemover } from "./enviroment/highlightRemover";
 import { OldShopHandler } from "./menu/handleShopOld";
+import { LightningEffectsAttacker } from "./attackereffects/lightningEffectsAttacker";
+import { AttackerSoundMuffler } from "./sounds/attackerSoundMuffler";
+import { StreetLightsFlickerer } from "./enviroment/streetlightsllickering";
+import { AttackerController } from "./attacker/attackerController";
 
 const LIGHTING_TIME = "20:00:00";
 Lighting.TimeOfDay = LIGHTING_TIME;
@@ -65,11 +69,17 @@ highlightRemover.start();
 const oldShopHandler = new OldShopHandler();
 oldShopHandler.start(); 
 
+const lightningEffectsAttacker = new LightningEffectsAttacker();
+lightningEffectsAttacker.start();
+
+const attackerSoundMuffler = new AttackerSoundMuffler();
+attackerSoundMuffler.start();
+
+const streetLightsFlickerer = new StreetLightsFlickerer();
+streetLightsFlickerer.start();
+
+const attackerController = new AttackerController();
+attackerController.start();
+
 print(sayStarted("main.client.ts"));
 
-
-// TESTING
-//wait(2);
-//print("order up everybody");
-//wait(3);
-//Remotes.Client.Get("placeOrder").SendToServer("BearTrap");

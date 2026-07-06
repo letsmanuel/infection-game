@@ -156,7 +156,12 @@ export class FirstPersonLock {
     }
 
     private updateWindSound(dt: number) {
-        const windSound = SoundService.FindFirstChild("HeadMove")?.FindFirstChild("wind") as Sound | undefined;
+        const parentFolder = SoundService.FindFirstChild("master") as SoundGroup;
+        if (!parentFolder){
+            warn("Sound aint here btw");
+            return
+        }
+        const windSound = parentFolder.FindFirstChild("HeadMove")?.FindFirstChild("wind") as Sound | undefined;
         if (!windSound) return;
 
         const currentCameraCFrame = this.camera.CFrame;
@@ -206,6 +211,8 @@ export class FirstPersonLock {
     }
 
     private update(dt: number, humanoid: Humanoid) {
+        if (this.player.GetAttribute("_rigCameraActive") === true) return;
+
         const gameStarted = this.player.GetAttribute("gameStarted") === true;
         const inShop = this.player.GetAttribute("_shopOpen") === true;
 

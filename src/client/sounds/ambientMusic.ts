@@ -2,15 +2,15 @@ import { SoundService } from "@rbxts/services";
 
 const TARGET_VOLUME = 0.25;
 
-const FADE_IN_TIME = 5; // seconds
-const FADE_OUT_TIME = 5; // seconds
+const FADE_IN_TIME = 5;
+const FADE_OUT_TIME = 5;
 
-const MAX_PLAY_TIME = 100; // seconds, absolute maximum before forced fade out
-const MIN_PLAY_TIME_BEFORE_EARLY_FADE = 30; // seconds, earliest a random early fade-out can happen
-const EARLY_FADE_CHANCE = 0.6; // 60% chance the track fades out early instead of running the full duration
+const MAX_PLAY_TIME = 100;
+const MIN_PLAY_TIME_BEFORE_EARLY_FADE = 30;
+const EARLY_FADE_CHANCE = 0.9;
 
-const MIN_WAIT_BETWEEN_TRACKS = 5; // seconds
-const MAX_WAIT_BETWEEN_TRACKS = 15; // seconds (centered around ~10s)
+const MIN_WAIT_BETWEEN_TRACKS = 60;
+const MAX_WAIT_BETWEEN_TRACKS = 180;
 
 export class AmbientMusicModule {
     private running = false;
@@ -35,7 +35,12 @@ export class AmbientMusicModule {
     }
 
     private playRandomTrack() {
-        const folder = SoundService.FindFirstChild("AmbientMusic");
+        const parentFolder = SoundService.FindFirstChild("master") as SoundGroup;
+        if (!parentFolder){
+            warn("Sound aint here btw");
+            return
+        }
+        const folder = parentFolder.FindFirstChild("AmbientMusic");
         if (!folder) return;
 
         const sounds = folder.GetChildren().filter((c) => c.IsA("Sound")) as Sound[];

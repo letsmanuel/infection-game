@@ -280,7 +280,6 @@ confirmRemote.Connect((player, confirmCFrame) => {
 
     if (placed.IsA("BasePart")) {
         placed.Anchored = true;
-        placed.CanCollide = true;
         placed.CFrame = confirmCFrame;
     } else if (placed.IsA("Model")) {
         const primary = placed.PrimaryPart ?? placed.FindFirstChildWhichIsA("BasePart") as BasePart | undefined;
@@ -289,7 +288,6 @@ confirmRemote.Connect((player, confirmCFrame) => {
             for (const child of placed.GetDescendants()) {
                 if (child.IsA("BasePart")) {
                     child.Anchored = true;
-                    child.CanCollide = true;
                 }
             }
             placed.SetPrimaryPartCFrame(confirmCFrame);

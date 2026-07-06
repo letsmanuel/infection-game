@@ -12,7 +12,7 @@ const Remotes = Net.CreateDefinitions({
 
 
     // order system
-    placeOrder: Net.Definitions.ClientToServerEvent<[object: string]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 6 })]),
+    placeOrder: Net.Definitions.ClientToServerEvent<[object: string]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 30 })]),
 
     //environment interactions
     startupFan: Net.Definitions.ClientToServerEvent<[]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 3 })]),

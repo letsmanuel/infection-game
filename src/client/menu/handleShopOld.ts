@@ -88,6 +88,8 @@ export class OldShopHandler {
         };
 
         const tryOpenShop = () => {
+            const role = player.GetAttribute("role") as string | undefined;
+            if (role === "Attacker") return;
             if (pendingResponseConn) return;
 
             pendingResponseConn = availabilityResponse.Connect((available) => {
@@ -133,15 +135,24 @@ export class OldShopHandler {
             }
         });
 
+        const updateLandlinePrompts = () => {
+            const role = player.GetAttribute("role") as string | undefined;
+            const isAttacker = role === "Attacker";
+            for (const child of Workspace.GetDescendants()) {
+                if (child.IsA("ProximityPrompt") && child.Name === "landlinePrompt") {
+                    child.Enabled = !isAttacker;
+                }
+            }
+        };
+
+        updateLandlinePrompts();
+
+        player.GetAttributeChangedSignal("role").Connect(() => {
+            updateLandlinePrompts();
+        });
+
         for (const child of Workspace.GetDescendants()) {
             if (child.IsA("ProximityPrompt") && child.Name === "landlinePrompt") {
-                type Role = "Attacker" | "Defender";
-
-                Players.LocalPlayer.GetAttributeChangedSignal("role").Connect(() => {
-                    const role = Players.LocalPlayer.GetAttribute("role") as Role | undefined;
-                    const isAttacker = role === "Attacker";
-                    child.Enabled = !isAttacker;
-                });
                 child.Triggered.Connect((playerWhoTriggered) => {
                     if (playerWhoTriggered === player) {
                         tryOpenShop();

@@ -17,7 +17,6 @@ export class PickupClient {
     private player = Players.LocalPlayer;
     private camera = Workspace.CurrentCamera!;
 
-    private currentHighlight?: Highlight;
     private highlightedTarget?: Instance;
 
     private locallyHeldTarget?: Instance;
@@ -37,7 +36,7 @@ export class PickupClient {
         this.renderConn = RunService.RenderStepped.Connect((dt) => {
             this.updateLocalDrag();
             this.updatePlaceMode(dt);
-            this.updateHighlight();
+            this.updateLookTarget();
         });
 
         this.inputConn = UserInputService.InputBegan.Connect((input, processed) => {
@@ -215,30 +214,19 @@ export class PickupClient {
         }
     }
 
-    private updateHighlight() {
+    private updateLookTarget() {
         if (this.locallyHeldTarget || this.inPlaceMode) {
-            this.clearHighlight();
+            this.highlightedTarget = undefined;
             return;
         }
 
         const target = this.getLookTarget();
 
         if (!target || target.GetAttribute("pickupable") !== true || this.isHeldByAnyone(target)) {
-            this.clearHighlight();
+            this.highlightedTarget = undefined;
             return;
         }
 
-        if (target === this.highlightedTarget) return;
-
-        this.clearHighlight();
-
-        const highlight = new Instance("Highlight");
-        highlight.FillTransparency = 0.5;
-        highlight.OutlineTransparency = 0;
-        highlight.Adornee = target;
-        highlight.Parent = target;
-
-        this.currentHighlight = highlight;
         this.highlightedTarget = target;
     }
 
@@ -247,12 +235,6 @@ export class PickupClient {
             if (held === target) return true;
         }
         return false;
-    }
-
-    private clearHighlight() {
-        this.currentHighlight?.Destroy();
-        this.currentHighlight = undefined;
-        this.highlightedTarget = undefined;
     }
 
     private onPressE() {
@@ -273,6 +255,5 @@ export class PickupClient {
         this.inputConn?.Disconnect();
         this.heldChangedConn?.Disconnect();
         this.placeGhostConn?.Disconnect();
-        this.clearHighlight();
     }
 }

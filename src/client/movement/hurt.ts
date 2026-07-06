@@ -86,7 +86,14 @@ export class FallDamageModule {
     }
 
     private playSpecificSound(folderName: string, soundName: string) {
-        const folder = SoundService.FindFirstChild(folderName);
+
+        const parentFolder = SoundService.FindFirstChild("master") as SoundGroup;
+        if (!parentFolder){
+            warn("Sound aint here btw");
+            return
+        }
+
+        const folder = parentFolder.FindFirstChild(folderName);
         if (!folder) return;
 
         const sound = folder.FindFirstChild(soundName) as Sound | undefined;
@@ -97,7 +104,14 @@ export class FallDamageModule {
     }
 
     private playRandomSoundFromFolder(folderName: string) {
-        const folder = SoundService.FindFirstChild(folderName);
+
+        const parentFolder = SoundService.FindFirstChild("master") as SoundGroup;
+        if (!parentFolder){
+            warn("Sound aint here btw");
+            return
+        }
+
+        const folder = parentFolder.FindFirstChild(folderName);
         if (!folder) return;
 
         const sounds = folder.GetChildren().filter((c) => c.IsA("Sound")) as Sound[];
