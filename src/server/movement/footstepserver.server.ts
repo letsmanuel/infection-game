@@ -83,12 +83,7 @@ Players.PlayerAdded.Connect((player) => {
 });
 
 UpdateWalkSpeedRemote.OnServerEvent.Connect((player, walkSpeed) => {
-    const character = player.Character;
-    if (!character) return;
-    const humanoid = character.FindFirstChildOfClass("Humanoid");
-    if (humanoid && typeIs(walkSpeed, "number")) {
-        humanoid.WalkSpeed = walkSpeed;
-    }
+    print(`[FootstepServer] WalkSpeed update from ${player.Name}: ${walkSpeed}`);
 });
 
 print("Footstep server module loaded!");

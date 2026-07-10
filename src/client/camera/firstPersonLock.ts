@@ -67,10 +67,6 @@ export class FirstPersonLock {
             this.currentCharacter = char;
             const hum = char.WaitForChild("Humanoid") as Humanoid;
             hum.CameraOffset = new Vector3(0, 0, 0);
-
-            const newHead = char.WaitForChild("Head") as BasePart;
-            this.yaw = math.deg(math.atan2(-newHead.CFrame.LookVector.X, -newHead.CFrame.LookVector.Z));
-            this.pitch = 0;
         });
 
         this.inputConnection = UserInputService.InputChanged.Connect((input) => {
@@ -213,6 +209,33 @@ export class FirstPersonLock {
         }
     }
 
+    private updateDeathCamera(dt: number) {
+        const character = this.player.Character;
+        if (!character) return;
+
+        const head = character.FindFirstChild("Head") as BasePart | undefined;
+        if (!head) return;
+
+        const pivotPos = head.Position.add(new Vector3(0, 4, 0));
+
+        const swayX = math.sin(this.bobTime * 0.5) * 0.1;
+        const swayY = math.cos(this.bobTime * 0.3) * 0.1;
+        this.bobTime += dt;
+
+        const cameraOffset = new Vector3(0, 0, 10);
+        const yawRad = math.rad(this.yaw);
+        const pitchRad = math.rad(this.pitch);
+        const rotatedOffset = new CFrame(Vector3.zero)
+            .mul(CFrame.Angles(0, yawRad, 0))
+            .mul(CFrame.Angles(pitchRad, 0, 0))
+            .mul(new CFrame(cameraOffset));
+
+        this.camera.CFrame = new CFrame(pivotPos.add(new Vector3(swayX, swayY, 0)))
+            .mul(CFrame.Angles(0, yawRad, 0))
+            .mul(CFrame.Angles(pitchRad, 0, 0))
+            .mul(new CFrame(cameraOffset));
+    }
+
     private updateMenuCamera(dt: number) {
         const menuCamPart = Workspace.FindFirstChild("MenuCam") as BasePart | undefined;
         if (!menuCamPart) return;
@@ -227,6 +250,9 @@ export class FirstPersonLock {
     }
 
     private update(dt: number) {
+        const character = this.player.Character;
+        if (!character) return;
+
         const gameStarted = this.player.GetAttribute("gameStarted") === true;
         const inShop = this.player.GetAttribute("_shopOpen") === true;
 
@@ -237,8 +263,11 @@ export class FirstPersonLock {
 
         if (inShop) return;
 
-        const character = this.currentCharacter;
-        if (!character) return;
+        const isDead = this.player.GetAttribute("_dead") === true;
+        if (isDead) {
+            this.updateDeathCamera(dt);
+            return;
+        }
 
         const humanoid = character.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
         if (!humanoid) return;
@@ -305,7 +334,9 @@ export class FirstPersonLock {
         );
 
         const cameraYOffset = this.player.GetAttribute("_cameraYOffset") as number | undefined;
-        const headPos = head.Position.add(new Vector3(0, cameraYOffset ?? 0, 0));
+        const isCrouching = this.player.GetAttribute("_crouching") === true;
+        const crouchOffset = isCrouching ? -1.5 : 0;
+        const headPos = head.Position.add(new Vector3(0, (cameraYOffset ?? 0) + crouchOffset, 0));
 
         const lookCFrame = new CFrame(headPos).mul(
             CFrame.Angles(0, math.rad(this.yaw), 0),

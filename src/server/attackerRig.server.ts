@@ -132,12 +132,6 @@ function spawnRigForPlayer(player: Player) {
 				deathTrack.Priority = Enum.AnimationPriority.Action;
 				deathTrack.Play();
 			}
-
-			(player as unknown as { CharacterAutoLoads: boolean }).CharacterAutoLoads = false;
-
-			player.CharacterAdded.Connect((newChar) => {
-				newChar.Destroy();
-			});
 		});
 	}
 

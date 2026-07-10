@@ -25,6 +25,8 @@
   },
   "dependencies": {
     "@rbxts/net": "^3.0.10",
-    "@rbxts/services": "^1.6.0"
+    "@rbxts/services": "^1.6.0",
+    "docx": "^9.7.1",
+    "pdfmake": "^0.3.11"
   }
 }

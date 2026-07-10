@@ -36,6 +36,10 @@ const Remotes = Net.CreateDefinitions({
 
     // attacker animation sync
     attackerAnimState: Net.Definitions.ClientToServerEvent<[isMoving: boolean, isSprinting: boolean, isCrouching: boolean]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 3600 })]),
+
+    // van client-side prediction
+    vanRouteStart: Net.Definitions.ServerToClientEvent<[vanModelId: string, waypoints: Vector3[], deliveryMethod: string, dropoffIndex: number, startTime: number]>(),
+    vanCorrection: Net.Definitions.ServerToClientEvent<[vanModelId: string, position: Vector3, timestamp: number]>(),
 });
 
 

@@ -5,10 +5,6 @@ const STAND_WALK_SPEED = 16;
 const SPRINT_WALK_SPEED = 26;
 const CROUCH_WALK_SPEED = 6;
 
-const STAND_CAM_Y = 0;
-const CROUCH_CAM_Y = -1.5;
-const CAM_LERP_SPEED = 8;
-
 export class CrouchModule {
     private player = Players.LocalPlayer;
     private camera = Workspace.CurrentCamera!;
@@ -32,7 +28,10 @@ export class CrouchModule {
         const setup = (char: Model) => {
             this.humanoid = char.WaitForChild("Humanoid") as Humanoid;
             const isAttacker = this.player.GetAttribute("role") === "Attacker";
-            this.humanoid.WalkSpeed = isAttacker ? SPRINT_WALK_SPEED : STAND_WALK_SPEED;
+            print(`[Crouch] setup | isAttacker=${isAttacker} charName=${char.Name}`);
+            if (!isAttacker) {
+                this.humanoid.WalkSpeed = STAND_WALK_SPEED;
+            }
         };
 
         if (this.player.Character) setup(this.player.Character);
@@ -41,11 +40,7 @@ export class CrouchModule {
         this.inputBeganConn = UserInputService.InputBegan.Connect((input, processed) => {
             if (processed) return;
             if (input.KeyCode === this.crouchKey) {
-                if (this.toggleMode) {
-                    this.setCrouching(!this.crouching);
-                } else {
-                    this.setCrouching(true);
-                }
+                this.setCrouching(this.toggleMode ? !this.crouching : true);
             }
         });
 
@@ -64,12 +59,19 @@ export class CrouchModule {
         if (!this.humanoid) return;
 
         const isAttacker = this.player.GetAttribute("role") === "Attacker";
+        if (isAttacker) {
+            print(`[Crouch] setCrouching BLOCKED for attacker | value=${value}`);
+            return;
+        }
+        print(`[Crouch] setCrouching | value=${value} walkSpeed=${this.humanoid.WalkSpeed}`);
 
         this.crouching = value;
         this.player.SetAttribute("_crouching", value);
-        this.humanoid.WalkSpeed = value
-            ? (isAttacker ? SPRINT_WALK_SPEED : CROUCH_WALK_SPEED)
-            : (isAttacker ? SPRINT_WALK_SPEED : STAND_WALK_SPEED);
+        if (value) {
+            this.humanoid.WalkSpeed = CROUCH_WALK_SPEED;
+        } else {
+            this.humanoid.WalkSpeed = STAND_WALK_SPEED;
+        }
 
         if (value) {
             if (this.player.GetAttribute("_sprinting") === true) {
@@ -87,12 +89,7 @@ export class CrouchModule {
         return this.crouching;
     }
 
-    private update(dt: number) {
-        const targetY = this.crouching ? CROUCH_CAM_Y : STAND_CAM_Y;
-        this.currentCamYOffset += (targetY - this.currentCamYOffset) * math.clamp(dt * CAM_LERP_SPEED, 0, 1);
-
-        this.camera.CFrame = this.camera.CFrame.mul(new CFrame(new Vector3(0, this.currentCamYOffset, 0)));
-    }
+    private update(dt: number) {}
 
     stop() {
         this.inputBeganConn?.Disconnect();

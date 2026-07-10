@@ -20,6 +20,8 @@ import { LightningEffectsAttacker } from "./attackereffects/lightningEffectsAtta
 import { AttackerSoundMuffler } from "./sounds/attackerSoundMuffler";
 import { StreetLightsFlickerer } from "./enviroment/streetlightsllickering";
 import { AttackerController } from "./attacker/attackerController";
+import "client/lootUI";
+import "client/enviroment/vanRenderer";
 
 const LIGHTING_TIME = "20:00:00";
 Lighting.TimeOfDay = LIGHTING_TIME;

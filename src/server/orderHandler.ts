@@ -5,6 +5,8 @@ import { DeliveryOptions } from "shared/configs/deliveryOptions";
 const orderRemote = Remotes.Server.Get("placeOrder");
 const checkAvailabilityRemote = Remotes.Server.Get("checkOrderAvailability");
 const availabilityResponse = Remotes.Server.Get("orderAvailabilityResponse");
+const vanRouteStart = Remotes.Server.Get("vanRouteStart");
+const vanCorrection = Remotes.Server.Get("vanCorrection");
 
 const orderAssetsFolder = ServerStorage.WaitForChild("DeliveryAssets") as Folder;
 const packageTemplate = orderAssetsFolder.WaitForChild("Package") as BasePart;
@@ -90,111 +92,161 @@ function stopSound(sound?: Sound) {
     sound.Stop();
 }
 
-function moveDelivererAlongRoute(
-    delivererClone: Model,
-    waypoints: Attachment[],
-    productId: string,
-    deliveryMethod: string,
-    weight: number,
-    randomDropoffPoint: Attachment,
-    dropoffParentFolder: Folder,
+function computeWaypointDistances(waypoints: Vector3[]): number[] {
+	const distances: number[] = [];
+	for (let i = 0; i < waypoints.size() - 1; i++) {
+		distances.push(waypoints[i + 1].sub(waypoints[i]).Magnitude);
+	}
+	return distances;
+}
+
+function computeVanPosition(waypoints: Vector3[], segmentDistances: number[], dropoffIndex: number, elapsed: number): { position: Vector3; atDropoff: boolean; done: boolean } {
+	let remaining = elapsed;
+	let totalDist = 0;
+
+	for (let i = 0; i < segmentDistances.size(); i++) {
+		const segDist = segmentDistances[i];
+		const segTime = segDist / TRAVEL_SPEED;
+		const pauseTime = (i + 1 === dropoffIndex) ? DROPOFF_PAUSE : 0;
+
+		if (remaining <= segTime) {
+			const t = remaining / segTime;
+			const pos = waypoints[i].Lerp(waypoints[i + 1], t);
+			const atDropoff = (i + 1 === dropoffIndex) && t >= (segDist - DECEL_LOOKAHEAD) / segDist;
+			return { position: pos, atDropoff, done: false };
+		}
+
+		remaining -= segTime;
+
+		if (remaining <= pauseTime) {
+			const pos = waypoints[i + 1];
+			return { position: pos, atDropoff: (i + 1 === dropoffIndex), done: false };
+		}
+
+		remaining -= pauseTime;
+	}
+
+	return { position: waypoints[waypoints.size() - 1], atDropoff: false, done: true };
+}
+
+function handleDeliveryViaTimer(
+	delivererClone: Model,
+	waypoints: Attachment[],
+	productId: string,
+	deliveryMethod: string,
+	weight: number,
+	randomDropoffPoint: Attachment,
+	dropoffParentFolder: Folder,
+	orderingPlayer: Player,
 ) {
-    const primaryPart = delivererClone.PrimaryPart;
-    if (!primaryPart || waypoints.size() === 0) {
-        delivererClone.Destroy();
-        return;
-    }
+	if (waypoints.size() < 2) {
+		delivererClone.Destroy();
+		return;
+	}
 
-    const facingCorrection = FACING_CORRECTIONS[deliveryMethod];
-    const soundPaths = SOUND_PATHS[deliveryMethod];
+	const rootPart = delivererClone.PrimaryPart ?? delivererClone.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+	if (!rootPart) {
+		warn("[OrderHandler] No PrimaryPart or root part on deliverer");
+		delivererClone.Destroy();
+		return;
+	}
 
-    const drivingSound = soundPaths?.driving
-        ? resolveSoundFromPath(delivererClone, soundPaths.driving)
-        : undefined;
-    const honkSound = soundPaths?.honk
-        ? resolveSoundFromPath(delivererClone, soundPaths.honk)
-        : undefined;
+	const vanId = `Van_${tostring(os.clock())}_${deliveryMethod}`;
+	const vanIdValue = new Instance("StringValue");
+	vanIdValue.Name = "VanId";
+	vanIdValue.Value = vanId;
+	vanIdValue.Parent = delivererClone;
 
-    delivererClone.SetPrimaryPartCFrame(new CFrame(waypoints[0].WorldPosition));
+	const soundPaths = SOUND_PATHS[deliveryMethod];
+	const drivingSound = soundPaths?.driving ? resolveSoundFromPath(delivererClone, soundPaths.driving) : undefined;
+	const honkSound = soundPaths?.honk ? resolveSoundFromPath(delivererClone, soundPaths.honk) : undefined;
 
-    playSound(drivingSound);
+	delivererClone.SetPrimaryPartCFrame(new CFrame(waypoints[0].WorldPosition));
+	(rootPart as BasePart).CFrame = new CFrame(waypoints[0].WorldPosition);
+	pcall(() => {
+		(rootPart as BasePart).SetNetworkOwner(orderingPlayer);
+	});
 
-    let currentSpeed = TRAVEL_SPEED;
-    let hasDeliveredPackage = false;
+	const waypointPositions = waypoints.map((w) => w.WorldPosition);
+	const segmentDistances = computeWaypointDistances(waypointPositions);
+	const dropoffIndex = waypoints.findIndex((w) => w.GetAttribute("dropoff") === true);
 
-    for (let i = 0; i < waypoints.size() - 1; i++) {
-        const toPoint = waypoints[i + 1];
-        const isDropoff = toPoint.GetAttribute("dropoff") === true;
-        let hasSpawnedPackage = false;
+	for (let i = 0; i < waypoints.size(); i++) {
+		print(`[OrderHandler] Waypoint ${i} dropoff=${waypoints[i].GetAttribute("dropoff")} pos=${waypoints[i].WorldPosition}`);
+	}
 
-        while (true) {
-            const dt = RunService.Heartbeat.Wait()[0];
+	if (dropoffIndex < 0) {
+		warn(`[OrderHandler] No dropoff waypoint found for ${deliveryMethod}! ${waypoints.size()} waypoints checked.`);
+		delivererClone.Destroy();
+		return;
+	}
+	const startTime = os.clock();
 
-            const currentPos = primaryPart.Position;
-            const targetPos = toPoint.WorldPosition;
-            const toTarget = targetPos.sub(currentPos);
-            const distanceRemaining = toTarget.Magnitude;
+	let totalTravelTime = 0;
+	for (const d of segmentDistances) {
+		totalTravelTime += d / TRAVEL_SPEED;
+	}
+	if (dropoffIndex >= 0) {
+		totalTravelTime += DROPOFF_PAUSE;
+	}
 
-            if (distanceRemaining < 0.05) {
-                break;
-            }
+	let distToDropoff = 0;
+	for (let i = 0; i < dropoffIndex && i < segmentDistances.size(); i++) {
+		distToDropoff += segmentDistances[i];
+	}
+	const timeToDropoff = distToDropoff / TRAVEL_SPEED;
 
-            const direction = toTarget.Unit;
+	print(`[OrderHandler] Delivery | vanId=${vanId} dropoffIdx=${dropoffIndex} distToDropoff=${"%.1f".format(distToDropoff)} timeToDropoff=${"%.1f".format(timeToDropoff)}s totalTravel=${"%.1f".format(totalTravelTime)}s`);
+	vanRouteStart.SendToAllPlayers(vanId, waypointPositions, deliveryMethod, dropoffIndex, startTime);
 
-            let targetSpeed = TRAVEL_SPEED;
-            if (isDropoff && distanceRemaining <= DECEL_LOOKAHEAD) {
-                const t = distanceRemaining / DECEL_LOOKAHEAD;
-                targetSpeed = math.max(MIN_APPROACH_SPEED, TRAVEL_SPEED * t);
-            }
+	playSound(drivingSound);
 
-            if (currentSpeed < targetSpeed) {
-                currentSpeed = math.min(targetSpeed, currentSpeed + ACCEL_RATE * dt);
-            } else if (currentSpeed > targetSpeed) {
-                currentSpeed = math.max(targetSpeed, currentSpeed - ACCEL_RATE * dt);
-            }
+	task.spawn(() => {
+		if (timeToDropoff > 0) {
+			const correctionInterval = 1;
+			let lastCorrection = os.clock();
+			const correctionEnd = startTime + totalTravelTime;
 
-            const moveDistance = math.min(currentSpeed * dt, distanceRemaining);
-            const newPos = currentPos.add(direction.mul(moveDistance));
-            let lookCFrame = CFrame.lookAt(newPos, newPos.add(direction));
+			while (os.clock() < startTime + timeToDropoff) {
+				const now = os.clock();
+				if (now - lastCorrection >= correctionInterval) {
+					lastCorrection = now;
+					const el = now - startTime;
+					const pos = computeVanPosition(waypointPositions, segmentDistances, dropoffIndex, el);
+					vanCorrection.SendToAllPlayers(vanId, pos.position, now);
+				}
+				task.wait(0.2);
+			}
+		}
 
-            if (facingCorrection) {
-                lookCFrame = lookCFrame.mul(facingCorrection);
-            }
+		stopSound(drivingSound);
 
-            delivererClone.SetPrimaryPartCFrame(lookCFrame);
+		print(`[OrderHandler] SPAWNING package | vanId=${vanId} product=${productId}`);
 
-            if (isDropoff && !hasSpawnedPackage && distanceRemaining <= ARRIVAL_THRESHOLD) {
-                hasSpawnedPackage = true;
-                currentSpeed = 0;
+		const hoverHeight = MIN_PACKAGE_HOVER_HEIGHT +
+			math.random() * (MAX_PACKAGE_HOVER_HEIGHT - MIN_PACKAGE_HOVER_HEIGHT);
 
-                stopSound(drivingSound);
+		const packageClone = packageTemplate.Clone();
+		packageClone.Name = "Package";
+		packageClone.Position = randomDropoffPoint.WorldPosition.add(new Vector3(0, hoverHeight, 0));
+		packageClone.SetAttribute("productId", productId);
+		packageClone.SetAttribute("deliveredBy", deliveryMethod);
+		packageClone.SetAttribute("weight", weight);
+		packageClone.Parent = dropoffParentFolder;
 
-                const hoverHeight = MIN_PACKAGE_HOVER_HEIGHT +
-                    math.random() * (MAX_PACKAGE_HOVER_HEIGHT - MIN_PACKAGE_HOVER_HEIGHT);
+		task.wait(DROPOFF_PAUSE);
 
-                const packageClone = packageTemplate.Clone();
-                packageClone.Name = "Package";
-                packageClone.Position = randomDropoffPoint.WorldPosition.add(
-                    new Vector3(0, hoverHeight, 0),
-                );
-                packageClone.SetAttribute("productId", productId);
-                packageClone.SetAttribute("deliveredBy", deliveryMethod);
-                packageClone.SetAttribute("weight", weight);
-                packageClone.Parent = dropoffParentFolder;
+		playSound(honkSound);
 
-                hasDeliveredPackage = true;
+		const remainingTime = totalTravelTime - timeToDropoff - DROPOFF_PAUSE;
+		if (remainingTime > 0) {
+			task.wait(remainingTime);
+		}
 
-                task.wait(DROPOFF_PAUSE);
-
-                playSound(honkSound);
-                playSound(drivingSound);
-            }
-        }
-    }
-
-    stopSound(drivingSound);
-    stopSound(honkSound);
-    delivererClone.Destroy();
+		stopSound(drivingSound);
+		stopSound(honkSound);
+		delivererClone.Destroy();
+	});
 }
 
 export class OrderHandler {
@@ -266,7 +318,7 @@ export class OrderHandler {
             delivererClone.SetAttribute("targetPackage", order);
 
             task.spawn(() => {
-                moveDelivererAlongRoute(
+                handleDeliveryViaTimer(
                     delivererClone,
                     waypoints,
                     order,
@@ -274,6 +326,7 @@ export class OrderHandler {
                     matchedProduct.weight ?? 1,
                     randomDropoffPoint,
                     DeliveredPackagesFolder,
+                    player,
                 );
             });
         });

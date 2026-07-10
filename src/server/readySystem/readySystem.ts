@@ -1,5 +1,6 @@
-import { Players } from "@rbxts/services";
+import { Players, Workspace } from "@rbxts/services";
 import Remotes from "shared/remotes";
+import { spawnAllPlayers } from "server/spawnSystem";
 
 const ReadyUpRemote = Remotes.Server.Get("readyUp");
 const StartGameRemote = Remotes.Server.Get("startGame");
@@ -14,6 +15,7 @@ export class ReadySystem {
 
     start() {
         Players.PlayerAdded.Connect((player) => {
+            player.LoadCharacter();
             this.assignRoleToPlayer(player);
         });
 
@@ -39,6 +41,7 @@ export class ReadySystem {
             if (allPlayersReady) {
                 print("All players are ready. Starting the game...");
                 StartGameRemote.SendToAllPlayers("");
+                spawnAllPlayers();
                 this.started = true;
             }
         });
