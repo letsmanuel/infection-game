@@ -49,10 +49,13 @@ export class FirstPersonLock {
     private yaw = 0;
     private pitch = 0;
 
+    private currentCharacter?: Model;
+
     start() {
         this.camera.CameraType = Enum.CameraType.Scriptable;
 
         const character = this.player.Character ?? this.player.CharacterAdded.Wait()[0];
+        this.currentCharacter = character;
         const humanoid = character.WaitForChild("Humanoid") as Humanoid;
         humanoid.CameraOffset = new Vector3(0, 0, 0);
 
@@ -61,6 +64,7 @@ export class FirstPersonLock {
         this.pitch = 0;
 
         this.player.CharacterAdded.Connect((char) => {
+            this.currentCharacter = char;
             const hum = char.WaitForChild("Humanoid") as Humanoid;
             hum.CameraOffset = new Vector3(0, 0, 0);
 
@@ -95,11 +99,23 @@ export class FirstPersonLock {
                         MAX_MOUSE_SWAY_OFFSET * 100,
                     ),
                 );
+            } else if (input.UserInputType === Enum.UserInputType.Touch) {
+                const gameStarted = this.player.GetAttribute("gameStarted") === true;
+                const inShop = this.player.GetAttribute("_shopOpen") === true;
+
+                if (gameStarted && this.mouseLocked && !inShop) {
+                    this.yaw -= input.Delta.X * MOUSE_SENSITIVITY;
+                    this.pitch = math.clamp(
+                        this.pitch - input.Delta.Y * MOUSE_SENSITIVITY,
+                        -MAX_PITCH,
+                        MAX_PITCH,
+                    );
+                }
             }
         });
 
         this.connection = RunService.RenderStepped.Connect((dt) => {
-            this.update(dt, humanoid);
+            this.update(dt);
         });
 
         UserInputService.WindowFocusReleased.Connect(() => {
@@ -210,9 +226,7 @@ export class FirstPersonLock {
         this.camera.CFrame = menuCamPart.CFrame.mul(bobOffset);
     }
 
-    private update(dt: number, humanoid: Humanoid) {
-        if (this.player.GetAttribute("_rigCameraActive") === true) return;
-
+    private update(dt: number) {
         const gameStarted = this.player.GetAttribute("gameStarted") === true;
         const inShop = this.player.GetAttribute("_shopOpen") === true;
 
@@ -223,7 +237,12 @@ export class FirstPersonLock {
 
         if (inShop) return;
 
-        const character = humanoid.Parent as Model;
+        const character = this.currentCharacter;
+        if (!character) return;
+
+        const humanoid = character.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
+        if (!humanoid) return;
+
         const head = character.FindFirstChild("Head") as BasePart | undefined;
         if (!head) return;
 
@@ -285,7 +304,10 @@ export class FirstPersonLock {
             math.clamp(dt * MOUSE_SWAY_LERP_SPEED, 0, 1),
         );
 
-        const lookCFrame = new CFrame(head.Position).mul(
+        const cameraYOffset = this.player.GetAttribute("_cameraYOffset") as number | undefined;
+        const headPos = head.Position.add(new Vector3(0, cameraYOffset ?? 0, 0));
+
+        const lookCFrame = new CFrame(headPos).mul(
             CFrame.Angles(0, math.rad(this.yaw), 0),
         ).mul(
             CFrame.Angles(math.rad(this.pitch), 0, 0),

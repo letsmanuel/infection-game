@@ -31,7 +31,8 @@ export class CrouchModule {
 
         const setup = (char: Model) => {
             this.humanoid = char.WaitForChild("Humanoid") as Humanoid;
-            this.humanoid.WalkSpeed = STAND_WALK_SPEED;
+            const isAttacker = this.player.GetAttribute("role") === "Attacker";
+            this.humanoid.WalkSpeed = isAttacker ? SPRINT_WALK_SPEED : STAND_WALK_SPEED;
         };
 
         if (this.player.Character) setup(this.player.Character);
@@ -62,9 +63,13 @@ export class CrouchModule {
     setCrouching(value: boolean) {
         if (!this.humanoid) return;
 
+        const isAttacker = this.player.GetAttribute("role") === "Attacker";
+
         this.crouching = value;
         this.player.SetAttribute("_crouching", value);
-        this.humanoid.WalkSpeed = value ? CROUCH_WALK_SPEED : STAND_WALK_SPEED;
+        this.humanoid.WalkSpeed = value
+            ? (isAttacker ? SPRINT_WALK_SPEED : CROUCH_WALK_SPEED)
+            : (isAttacker ? SPRINT_WALK_SPEED : STAND_WALK_SPEED);
 
         if (value) {
             if (this.player.GetAttribute("_sprinting") === true) {
@@ -83,7 +88,6 @@ export class CrouchModule {
     }
 
     private update(dt: number) {
-        if (this.player.GetAttribute("_rigCameraActive") === true) return;
         const targetY = this.crouching ? CROUCH_CAM_Y : STAND_CAM_Y;
         this.currentCamYOffset += (targetY - this.currentCamYOffset) * math.clamp(dt * CAM_LERP_SPEED, 0, 1);
 

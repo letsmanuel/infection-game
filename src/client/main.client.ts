@@ -30,6 +30,11 @@ depthOfField.Enabled = true;
 Players.LocalPlayer.SetAttribute("gameStarted", false);
 
 // GAME INIT
+
+const attackerController = new AttackerController();
+attackerController.start();
+
+
 const fplock = new FirstPersonLock();
 fplock.start();
 
@@ -78,8 +83,6 @@ attackerSoundMuffler.start();
 const streetLightsFlickerer = new StreetLightsFlickerer();
 streetLightsFlickerer.start();
 
-const attackerController = new AttackerController();
-attackerController.start();
 
 print(sayStarted("main.client.ts"));
 

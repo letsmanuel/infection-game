@@ -2,6 +2,7 @@ import { Players, RunService, UserInputService, Workspace } from "@rbxts/service
 
 const WALK_SPEED = 16;
 const SPRINT_SPEED = 26;
+const ATTACKER_SPEED_MULT = 0.5;
 const SPRINT_FOV_BOOST = 8;
 const FOV_LERP_SPEED = 6;
 
@@ -24,7 +25,8 @@ export class SprintModule {
 
         const setup = (char: Model) => {
             this.humanoid = char.WaitForChild("Humanoid") as Humanoid;
-            this.humanoid.WalkSpeed = WALK_SPEED;
+            const isAttacker = this.player.GetAttribute("role") === "Attacker";
+            this.humanoid.WalkSpeed = isAttacker ? SPRINT_SPEED : WALK_SPEED;
         };
 
         if (this.player.Character) setup(this.player.Character);
@@ -50,6 +52,7 @@ export class SprintModule {
 
     setSprinting(value: boolean) {
         if (!this.humanoid) return;
+        if (this.player.GetAttribute("role") === "Attacker") return;
 
         if (value && this.player.GetAttribute("_crouching") === true) {
             return;

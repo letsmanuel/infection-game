@@ -33,6 +33,9 @@ const Remotes = Net.CreateDefinitions({
     // shop availability
     checkOrderAvailability: Net.Definitions.ClientToServerEvent<[]>(),
     orderAvailabilityResponse: Net.Definitions.ServerToClientEvent<[available: boolean]>(),
+
+    // attacker animation sync
+    attackerAnimState: Net.Definitions.ClientToServerEvent<[isMoving: boolean, isSprinting: boolean, isCrouching: boolean]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 3600 })]),
 });
 
 
