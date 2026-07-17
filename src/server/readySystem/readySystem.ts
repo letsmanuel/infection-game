@@ -3,6 +3,7 @@ import Remotes, { RemoteId } from "shared/remotes";
 import { spawnAllPlayers } from "server/spawnSystem";
 import { setGameState } from "server/gameState";
 import { GameState } from "shared/configs/gameState";
+import { getAIMonsterController } from "server/aiMonster/aiMonsterController";
 
 const ReadyUpRemote = Remotes.Server.Get(RemoteId.readyUp);
 const StartGameRemote = Remotes.Server.Get(RemoteId.startGame);
@@ -46,7 +47,19 @@ export class ReadySystem {
                 spawnAllPlayers();
                 this.started = true;
                 setGameState(GameState.Villa);
-                task.wait(5)
+
+                const runnerCount = this.countRunners();
+                const humanAttackerCount = this.countAttackers();
+                const totalMonstersNeeded = math.max(1, math.ceil(runnerCount * 0.5));
+                const aiCount = totalMonstersNeeded - humanAttackerCount;
+
+                if (aiCount > 0) {
+                    const aiController = getAIMonsterController();
+                    aiController.spawn(aiCount);
+                    print(`[ReadySystem] Spawning ${aiCount} AI monsters (${runnerCount} runners, ${humanAttackerCount} human attackers)`);
+                }
+
+                task.wait(5);
                 task.spawn(() => {
                     for (const player of Players.GetPlayers()) {
                         if (player.GetAttribute("role") !== "Attacker") {

@@ -20,6 +20,8 @@ import { OrderHandler } from "./orderHandler";
 import { FanStatus } from "./enviroment/fanStatus";
 import { SpecialCode } from "./enviroment/specialCode";
 import { PowerOutageController } from "./events/powerOutage";
+import { AIMonsterController } from "./aiMonster/aiMonsterController";
+import "server/aiMonster/trapDamage";
 import "server/lootSystem";
 import "server/lightDamage";
 import "server/movement/hurt";
@@ -38,6 +40,9 @@ specialCodeSystem.start();
 
 const powerOutageController = new PowerOutageController();
 powerOutageController.start();
+
+const aiMonsterController = new AIMonsterController();
+aiMonsterController.start();
 
 Centurion.server({
     syncFilter: () => true,

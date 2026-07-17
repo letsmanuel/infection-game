@@ -28,6 +28,7 @@ import { PowerOutageClient } from "./events/powerOutage";
 import GiveHintHandler from "./gui/giveHint";
 import "client/lootUI";
 import "client/enviroment/vanRenderer";
+import "client/enviroment/aiCollision";
 import "client/commands/debugCommands";
 
 const LIGHTING_TIME = "20:00:00";
