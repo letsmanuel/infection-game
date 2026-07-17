@@ -81,7 +81,7 @@ const Remotes = Net.CreateDefinitions({
     [RemoteId.giveClientHint]: Net.Definitions.ServerToClientEvent<[hint: string]>(),
 
     // walk speed sync
-    [RemoteId.updateWalkSpeed]: Net.Definitions.ClientToServerEvent<[walkSpeed: number]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 5000 })]),
+    [RemoteId.updateWalkSpeed]: Net.Definitions.ClientToServerEvent<[walkSpeed: number]>([Net.Middleware.RateLimit({ MaxRequestsPerMinute: 6800 })]),
 
     // game state
     [RemoteId.gameStateChanged]: Net.Definitions.ServerToClientEvent<[state: string]>(),

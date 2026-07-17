@@ -4,7 +4,7 @@ import Remotes, { RemoteId } from "shared/remotes";
 
 const BRIGHT_COLOR = Color3.fromRGB(68, 68, 68);
 const DARK_COLOR = Color3.fromRGB(44, 44, 44);
-const POWER_OUTAGE_COLOR = Color3.fromRGB(22, 22, 22);
+const POWER_OUTAGE_COLOR = Color3.fromRGB(36, 36, 36);
 
 const ADJUST_DURATION = 10;
 const CHECK_INTERVAL = 0.2;
@@ -42,7 +42,7 @@ export class BrightnessAdjustModule {
         Lighting.Ambient = this.currentAmbient;
 
         Remotes.Client.Get(RemoteId.powerOutageMainStart).Connect(() => {
-            task.wait(0.2);
+            task.wait(0.5);
             this.powerOutage = true;
             Lighting.Ambient = POWER_OUTAGE_COLOR;
             Lighting.EnvironmentDiffuseScale = 1;

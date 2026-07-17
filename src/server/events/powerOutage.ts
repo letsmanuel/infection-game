@@ -117,6 +117,12 @@ export class PowerOutageController {
 
 		setPowerOutageActive(true);
 		Remotes.Server.Get(RemoteId.powerOutageState).SendToAllPlayers(true);
+		
+		for (const player of Players.GetPlayers()) {
+			if (player.GetAttribute("role") !== "Attacker") {
+				Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should check the breaker box in the basement...");
+			}
+		}
 
 		preOutageSound.Play();
 		print("[PowerOutage] Playing preOutage, starting warning flicker");

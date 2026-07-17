@@ -100,6 +100,7 @@ export class PowerOutageClient {
 		print(`[PowerOutage] Flickering ${this.bulbLights.size()} lights`);
 
 		this.flickerThread = task.spawn(() => {
+			task.wait(0.5);
 			for (let i = 0; i < FLICKER_COUNT; i++) {
 				const on = i % 2 === 0;
 				for (const light of this.bulbLights) {
@@ -118,6 +119,7 @@ export class PowerOutageClient {
 		if (this.active) return;
 		this.active = true;
 
+		task.wait(0.5);
 		for (const light of this.bulbLights) {
 			setBulbState(light, false);
 		}
