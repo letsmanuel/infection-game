@@ -5,6 +5,7 @@ import { Centurion } from "@rbxts/centurion";
 // commands
 import "server/commands/orderCommands";
 import "server/commands/eventCommands";
+import "server/commands/utilityCommands";
 
 Lighting.TimeOfDay = "20:00:00";
 const depthOfField = Lighting.WaitForChild("DepthOfField") as DepthOfFieldEffect;
