@@ -24,6 +24,7 @@ import { StreetLightsFlickerer } from "./enviroment/streetlightsllickering";
 import { AttackerController } from "./attacker/attackerController";
 import { GameStateClient } from "./gameState";
 import { PowerOutageClient } from "./events/powerOutage";
+import GiveHintHandler from "./gui/giveHint";
 import "client/lootUI";
 import "client/enviroment/vanRenderer";
 import "client/commands/debugCommands";
@@ -101,6 +102,9 @@ const powerOutageClient = new PowerOutageClient();
 powerOutageClient.start();
 
 print("Power outage client go.")
+
+const giveHintHandler = new GiveHintHandler();
+giveHintHandler.start();
 
 Centurion.client().start()
 	.then(() => {

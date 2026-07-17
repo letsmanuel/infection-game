@@ -7,7 +7,7 @@ const playerGui = localPlayer.WaitForChild("PlayerGui") as PlayerGui;
 const hintGui = playerGui.WaitForChild("hint") as ScreenGui;
 const hintLabel = hintGui.WaitForChild("TextLabel") as TextLabel;
 
-export default class giveHintHandler {
+export default class GiveHintHandler {
 
     lastShownHint = "";
 

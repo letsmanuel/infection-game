@@ -120,7 +120,7 @@ export class PowerOutageController {
 		
 		for (const player of Players.GetPlayers()) {
 			if (player.GetAttribute("role") !== "Attacker") {
-				Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should check the breaker box in the basement...");
+				Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "What was that? Weird...");
 			}
 		}
 
@@ -146,6 +146,12 @@ export class PowerOutageController {
 			particleEnergy.Enabled = true;
 			print("[PowerOutage] Particle emitter enabled");
 
+			for (const player of Players.GetPlayers()) {
+				if (player.GetAttribute("role") !== "Attacker") {
+					Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should check the breaker box in the basement...");
+				}
+			}
+
 			Remotes.Server.Get(RemoteId.powerOutageMainStart).SendToAllPlayers();
 			print("[PowerOutage] Main phase broadcast sent to clients");
 		});
@@ -158,7 +164,8 @@ export class PowerOutageController {
 				const delay = 2 + math.random() * 4;
 				task.wait(delay);
 				if (!this.circuitRunning) break;
-				circuitSound.Play();
+				//circuitSound.Play(); 
+				// dead code for now, is kinda distracing tbh
 			}
 		});
 	}
