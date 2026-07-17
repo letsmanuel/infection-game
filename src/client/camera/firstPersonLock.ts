@@ -57,9 +57,12 @@ export class FirstPersonLock {
 
     private freecamPosition = new Vector3(0, 0, 0);
     private freecamActive = false;
+    private manualFreecam = false;
     private freecamDeathTime = 0;
 
     start() {
+        instance = this;
+
         this.camera.CameraType = Enum.CameraType.Scriptable;
 
         const character = this.player.Character ?? this.player.CharacterAdded.Wait()[0];
@@ -303,6 +306,15 @@ export class FirstPersonLock {
         if (inShop) return;
 
         const isDead = this.player.GetAttribute("_dead") === true;
+        if (this.manualFreecam) {
+            if (!this.freecamActive) {
+                this.freecamActive = true;
+                this.freecamPosition = this.camera.CFrame.Position;
+            }
+            this.updateFreecam(dt);
+            return;
+        }
+
         if (isDead) {
             const role = this.player.GetAttribute("role") as string | undefined;
             if (role === "Attacker") {
@@ -411,6 +423,16 @@ export class FirstPersonLock {
         this.updateWindSound(dt);
     }
 
+    toggleFreecam() {
+        this.manualFreecam = !this.manualFreecam;
+        if (!this.manualFreecam) {
+            this.freecamActive = false;
+            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter;
+        } else {
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default;
+        }
+    }
+
     stop() {
         this.connection?.Disconnect();
         this.inputConnection?.Disconnect();
@@ -419,4 +441,10 @@ export class FirstPersonLock {
         UserInputService.MouseIconEnabled = true;
         UserInputService.MouseBehavior = Enum.MouseBehavior.Default;
     }
+}
+
+let instance: FirstPersonLock;
+
+export function getFirstPersonLock(): FirstPersonLock {
+    return instance;
 }

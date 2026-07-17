@@ -1,4 +1,4 @@
-import { Players, Workspace, ServerStorage, ReplicatedStorage, RunService } from "@rbxts/services";
+import { Players, Workspace, ServerStorage, ReplicatedStorage, RunService, SoundService } from "@rbxts/services";
 
 const SPOT_FOLDER_NAME = "PossibleItemLocations";
 const REGEN_INTERVAL = 60;
@@ -61,6 +61,13 @@ function removeScrapModel(model: Model) {
 			model.Destroy();
 		}
 	});
+}
+
+const pickUpSound = SoundService.WaitForChild("item_pickup") as Sound;
+
+function playPickupSound() {
+	pickUpSound.Pitch = 0.8 + math.random() * 0.4;
+	pickUpSound.Play();
 }
 
 function getOrCreateIntValue(name: string): IntValue {
@@ -154,6 +161,8 @@ for (const part of spots) {
 					vitaminAmount.Value += 1;
 				}
 
+				playPickupSound();
+
 			spotState.set(part, "Empty");
 			prompt.Destroy();
 			spotPrompts.delete(part);
@@ -203,6 +212,8 @@ RunService.Heartbeat.Connect((dt) => {
 						} else {
 							vitaminAmount.Value += 1;
 						}
+
+						playPickupSound();
 
 						spotState.set(part, "Empty");
 						prompt.Destroy();

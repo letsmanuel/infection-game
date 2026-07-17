@@ -1,5 +1,6 @@
 import { Command, CommandContext, Register } from "@rbxts/centurion";
 import { Lighting } from "@rbxts/services";
+import { getFirstPersonLock } from "client/camera/firstPersonLock";
 
 let fullbright = false;
 
@@ -30,5 +31,14 @@ export class DebugCommands {
 			Lighting.OutdoorAmbient = new Color3(0, 0, 0);
 			ctx.reply("Fullbright DISABLED (restored normal lighting)");
 		}
+	}
+
+	@Command({
+		name: "freecam",
+		description: "Toggle free camera mode",
+	})
+	freecam(ctx: CommandContext) {
+		getFirstPersonLock().toggleFreecam();
+		ctx.reply("Freecam toggled");
 	}
 }
