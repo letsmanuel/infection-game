@@ -18,6 +18,7 @@ import { InteractWithFan } from "./enviroment/interactWithFan";
 import { PickupClient } from "./movement/pickup";
 import { HighlightRemover } from "./enviroment/highlightRemover";
 import { OldShopHandler } from "./menu/handleShopOld";
+import { ThunderModule } from "./sounds/thunder";
 import { LightningEffectsAttacker } from "./attackereffects/lightningEffectsAttacker";
 import { AttackerSoundMuffler } from "./sounds/attackerSoundMuffler";
 import { StreetLightsFlickerer } from "./enviroment/streetlightsllickering";
@@ -81,6 +82,9 @@ highlightRemover.start();
 
 const oldShopHandler = new OldShopHandler();
 oldShopHandler.start(); 
+
+const thunderModule = new ThunderModule();
+thunderModule.start();
 
 const lightningEffectsAttacker = new LightningEffectsAttacker();
 lightningEffectsAttacker.start();
