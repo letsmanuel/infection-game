@@ -46,7 +46,7 @@ export class ReadySystem {
                 spawnAllPlayers();
                 this.started = true;
                 setGameState(GameState.Villa);
-                task.wait(1)
+                task.wait(5)
                 task.spawn(() => {
                     for (const player of Players.GetPlayers()) {
                         if (player.GetAttribute("role") !== "Attacker") {
