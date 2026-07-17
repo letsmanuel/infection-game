@@ -135,9 +135,6 @@ export class FallDamageModule {
             return;
         }
 
-        const damage = landedInWater ? FALL_DAMAGE_AMOUNT * WATER_FALL_DAMAGE_MULTIPLIER : FALL_DAMAGE_AMOUNT;
-        this.humanoid.TakeDamage(damage);
-
         this.playRandomSoundFromFolder("HurtEffect");
 
         this.crouchModule?.setCrouching(true);

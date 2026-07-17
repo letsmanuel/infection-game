@@ -1,5 +1,5 @@
 import { Workspace, Players, RunService } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
 const MAX_VIEW_DISTANCE = 15;
 
@@ -44,7 +44,7 @@ export class InteractWithFan {
 
     start() {
 
-        const fanRemote = Remotes.Client.Get("startupFan");
+        const fanRemote = Remotes.Client.Get(RemoteId.startupFan);
 
         this.fanProximityPrompt.Triggered.Connect((player) => {
             fanRemote.SendToServer();

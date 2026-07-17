@@ -1,6 +1,6 @@
 import { Players } from "@rbxts/services";
 import { FootstepSoundList } from "shared/configs/footstepdata";
-import { UpdateWalkSpeedRemote } from "shared/footstepRemote";
+import Remotes, { RemoteId } from "shared/remotes";
 
 const ROLL_OFF_MIN_DISTANCE = 10;
 const ROLL_OFF_MAX_DISTANCE = 75;
@@ -10,7 +10,7 @@ class FootstepServerController {
     private currentSound?: Sound;
     private material?: string;
 
-    constructor(private character: Model) {}
+    constructor(private character: Model, private player: Player) {}
 
     start() {
         this.humanoid = this.character.WaitForChild("Humanoid") as Humanoid;
@@ -62,10 +62,11 @@ class FootstepServerController {
     private onRunning(speed: number) {
         if (!this.humanoid || !this.currentSound) return;
 
+        const isDead = this.player.GetAttribute("_dead") === true;
         const isMoving = this.humanoid.MoveDirection.Magnitude > 0;
         const isClimbing = this.humanoid.GetState() === Enum.HumanoidStateType.Climbing;
 
-        if (isMoving && speed > 0 && !isClimbing) {
+        if (isMoving && speed > 0 && !isClimbing && !isDead) {
             this.applySoundProperties();
             this.currentSound.Playing = true;
             this.currentSound.Looped = true;
@@ -77,13 +78,13 @@ class FootstepServerController {
 
 Players.PlayerAdded.Connect((player) => {
     player.CharacterAdded.Connect((character) => {
-        const controller = new FootstepServerController(character);
+        const controller = new FootstepServerController(character, player);
         controller.start();
     });
 });
 
-UpdateWalkSpeedRemote.OnServerEvent.Connect((player, walkSpeed) => {
-    print(`[FootstepServer] WalkSpeed update from ${player.Name}: ${walkSpeed}`);
+Remotes.Server.Get(RemoteId.updateWalkSpeed).Connect((player, walkSpeed) => {
+    //print(`[FootstepServer] WalkSpeed update from ${player.Name}: ${walkSpeed}`);
 });
 
 print("Footstep server module loaded!");

@@ -1,4 +1,5 @@
 import { Players, Workspace } from "@rbxts/services";
+import { isPowerOutageActive } from "server/gameState";
 
 const DAMAGE = 5;
 const TICK_INTERVAL = 0.2;
@@ -39,20 +40,22 @@ function isInsideLightZone(char: Model, lightPart: BasePart): boolean {
 
 task.spawn(() => {
 	while (true) {
-		for (const player of Players.GetPlayers()) {
-			const role = player.GetAttribute("role") as string | undefined;
-			if (role !== "Attacker") continue;
+		if (!isPowerOutageActive()) {
+			for (const player of Players.GetPlayers()) {
+				const role = player.GetAttribute("role") as string | undefined;
+				if (role !== "Attacker") continue;
 
-			const char = player.Character;
-			if (!char) continue;
+				const char = player.Character;
+				if (!char) continue;
 
-			const humanoid = char.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
-			if (!humanoid || humanoid.Health <= 0) continue;
+				const humanoid = char.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
+				if (!humanoid || humanoid.Health <= 0) continue;
 
-			for (const lightPart of lightParts) {
-				if (isInsideLightZone(char, lightPart)) {
-					humanoid.Health -= DAMAGE;
-					break;
+				for (const lightPart of lightParts) {
+					if (isInsideLightZone(char, lightPart)) {
+						humanoid.Health -= DAMAGE;
+						break;
+					}
 				}
 			}
 		}

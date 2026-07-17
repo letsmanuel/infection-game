@@ -1,8 +1,8 @@
 import { Players, RunService, Workspace } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
-const vanRouteStart = Remotes.Client.Get("vanRouteStart");
-const vanCorrection = Remotes.Client.Get("vanCorrection");
+const vanRouteStart = Remotes.Client.Get(RemoteId.vanRouteStart);
+const vanCorrection = Remotes.Client.Get(RemoteId.vanCorrection);
 
 const TRAVEL_SPEED = 20;
 const MIN_APPROACH_SPEED = 0.6;

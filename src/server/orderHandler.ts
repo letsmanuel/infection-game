@@ -1,12 +1,24 @@
 import { Players, Workspace, ServerStorage, ReplicatedStorage, RunService } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 import { DeliveryOptions } from "shared/configs/deliveryOptions";
 
-const orderRemote = Remotes.Server.Get("placeOrder");
-const checkAvailabilityRemote = Remotes.Server.Get("checkOrderAvailability");
-const availabilityResponse = Remotes.Server.Get("orderAvailabilityResponse");
-const vanRouteStart = Remotes.Server.Get("vanRouteStart");
-const vanCorrection = Remotes.Server.Get("vanCorrection");
+function getOrCreateScrapIntValue(): IntValue {
+	const existing = ReplicatedStorage.FindFirstChild("ScrapAmount") as IntValue | undefined;
+	if (existing) return existing;
+	const iv = new Instance("IntValue");
+	iv.Name = "ScrapAmount";
+	iv.Value = 0;
+	iv.Parent = ReplicatedStorage;
+	return iv;
+}
+
+const scrapAmount = getOrCreateScrapIntValue();
+
+const orderRemote = Remotes.Server.Get(RemoteId.placeOrder);
+const checkAvailabilityRemote = Remotes.Server.Get(RemoteId.checkOrderAvailability);
+const availabilityResponse = Remotes.Server.Get(RemoteId.orderAvailabilityResponse);
+const vanRouteStart = Remotes.Server.Get(RemoteId.vanRouteStart);
+const vanCorrection = Remotes.Server.Get(RemoteId.vanCorrection);
 
 const orderAssetsFolder = ServerStorage.WaitForChild("DeliveryAssets") as Folder;
 const packageTemplate = orderAssetsFolder.WaitForChild("Package") as BasePart;
@@ -249,8 +261,16 @@ function handleDeliveryViaTimer(
 	});
 }
 
+let instance: OrderHandler;
+
+export function getOrderHandler(): OrderHandler {
+	return instance;
+}
+
 export class OrderHandler {
     start() {
+        instance = this;
+
         checkAvailabilityRemote.Connect((player) => {
             const available = canOrderCategory("oldShop");
             availabilityResponse.SendToPlayer(player, available);
@@ -269,12 +289,21 @@ export class OrderHandler {
                 return;
             }
 
+            const cost = matchedProduct.scrapCost;
+            if (scrapAmount.Value < cost) {
+                print(`Player ${player.Name} doesn't have enough scrap (need ${cost}, have ${scrapAmount.Value})`);
+                availabilityResponse.SendToPlayer(player, false);
+                return;
+            }
+
             if (!canOrderCategory(matchedProduct.category)) {
                 print(`Rate limit hit for category "${matchedProduct.category}" by ${player.Name}`);
                 return;
             }
 
             recordOrderCategory(matchedProduct.category);
+            scrapAmount.Value -= cost;
+            print(`[OrderHandler] ${player.Name} ordered ${order}, deducted ${cost} scrap (remaining: ${scrapAmount.Value})`);
 
             const randomDeliveryMethod =
                 DeliveryOptions.Methods[math.random(0, DeliveryOptions.Methods.size() - 1)];
@@ -330,5 +359,102 @@ export class OrderHandler {
                 );
             });
         });
+    }
+
+    placeFreeOrder(player: Player, orderId: string) {
+        const matchedProduct = DeliveryOptions.Products.find((p) => p.id === orderId);
+        if (!matchedProduct) {
+            print(`[OrderHandler/CMD] Invalid product: ${orderId}`);
+            return;
+        }
+
+        const randomDeliveryMethod = DeliveryOptions.Methods[math.random(0, DeliveryOptions.Methods.size() - 1)];
+
+        const ourRouteFolder = RoutesFolder.FindFirstChild(randomDeliveryMethod) as Folder;
+        if (!ourRouteFolder) {
+            print(`[OrderHandler/CMD] No route folder for: ${randomDeliveryMethod}`);
+            return;
+        }
+
+        const ourDelivererObject = orderAssetsFolder.FindFirstChild(randomDeliveryMethod) as Model;
+        if (!ourDelivererObject) {
+            print(`[OrderHandler/CMD] No deliverer object for: ${randomDeliveryMethod}`);
+            return;
+        }
+
+        const methodDropoffFolder = DropoffPointsFolder.FindFirstChild(randomDeliveryMethod) as Folder;
+        if (!methodDropoffFolder) {
+            print(`[OrderHandler/CMD] No dropoff folder for: ${randomDeliveryMethod}`);
+            return;
+        }
+
+        const dropoffChildren = methodDropoffFolder.GetChildren().filter((c): c is Attachment => c.IsA("Attachment"));
+        if (dropoffChildren.size() === 0) {
+            print("[OrderHandler/CMD] No dropoff points found");
+            return;
+        }
+        const randomDropoffPoint = dropoffChildren[math.random(0, dropoffChildren.size() - 1)];
+
+        const waypoints = getSortedWaypoints(ourRouteFolder);
+        if (waypoints.size() === 0) {
+            print("[OrderHandler/CMD] No waypoints found");
+            return;
+        }
+
+        const delivererClone = ourDelivererObject.Clone();
+        delivererClone.Name = `${randomDeliveryMethod}_Deliverer_CMD`;
+        delivererClone.Parent = DeliverersTempFolder;
+        delivererClone.SetAttribute("targetPackage", orderId);
+
+        print(`[OrderHandler/CMD] Free order | player=${player.Name} product=${orderId} method=${randomDeliveryMethod}`);
+
+        task.spawn(() => {
+            handleDeliveryViaTimer(
+                delivererClone,
+                waypoints,
+                orderId,
+                randomDeliveryMethod,
+                matchedProduct.weight ?? 1,
+                randomDropoffPoint,
+                DeliveredPackagesFolder,
+                player,
+            );
+        });
+    }
+
+    spawnItem(player: Player, orderId: string) {
+        const productsFolder = ServerStorage.FindFirstChild("Products") as Folder | undefined;
+        if (!productsFolder) {
+            print("[OrderHandler/CMD] Products folder not found");
+            return;
+        }
+
+        const productModel = productsFolder.FindFirstChild(orderId) as Instance | undefined;
+        if (!productModel) {
+            print(`[OrderHandler/CMD] Product model not found: ${orderId}`);
+            return;
+        }
+
+        const character = player.Character;
+        if (!character) return;
+        const rootPart = character.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+        if (!rootPart) return;
+
+        const spawnPos = rootPart.Position.add(rootPart.CFrame.LookVector.mul(5));
+
+        const clone = productModel.Clone();
+        clone.Parent = Workspace;
+
+        if (clone.IsA("BasePart")) {
+            clone.Position = spawnPos;
+        } else if (clone.IsA("Model")) {
+            const primary = clone.PrimaryPart ?? clone.FindFirstChildWhichIsA("BasePart") as BasePart | undefined;
+            if (primary) {
+                clone.PrimaryPart = primary;
+                clone.SetPrimaryPartCFrame(new CFrame(spawnPos));
+            }
+        }
+
+        print(`[OrderHandler/CMD] Spawned item | player=${player.Name} product=${orderId} pos=${spawnPos}`);
     }
 }

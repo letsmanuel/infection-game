@@ -25,6 +25,10 @@ const MENU_BOB_AMOUNT = 0.15;
 const MOUSE_SENSITIVITY = 0.4;
 const MAX_PITCH = 80;
 
+const FREECAM_BASE_SPEED = 30;
+const FREECAM_SPRINT_SPEED = 60;
+const FREECAM_MOUSE_SENSITIVITY = 0.3;
+
 export class FirstPersonLock {
     private player = Players.LocalPlayer;
     private camera = Workspace.CurrentCamera!;
@@ -50,6 +54,10 @@ export class FirstPersonLock {
     private pitch = 0;
 
     private currentCharacter?: Model;
+
+    private freecamPosition = new Vector3(0, 0, 0);
+    private freecamActive = false;
+    private freecamDeathTime = 0;
 
     start() {
         this.camera.CameraType = Enum.CameraType.Scriptable;
@@ -249,6 +257,37 @@ export class FirstPersonLock {
         this.camera.CFrame = menuCamPart.CFrame.mul(bobOffset);
     }
 
+    private updateFreecam(dt: number) {
+        this.mouseLocked = true;
+        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition;
+        UserInputService.MouseIconEnabled = false;
+
+        const sprinting = UserInputService.IsKeyDown(Enum.KeyCode.LeftShift) || UserInputService.IsKeyDown(Enum.KeyCode.RightShift);
+        const speed = sprinting ? FREECAM_SPRINT_SPEED : FREECAM_BASE_SPEED;
+
+        const character = this.player.Character;
+        const humanoid = character?.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
+        const moveDir = humanoid ? humanoid.MoveDirection : new Vector3(0, 0, 0);
+
+        let vertMove = 0;
+        if (UserInputService.IsKeyDown(Enum.KeyCode.E)) vertMove += 1;
+        if (UserInputService.IsKeyDown(Enum.KeyCode.Q)) vertMove -= 1;
+
+        const yawRad = math.rad(this.yaw);
+        const lookCFrame = new CFrame(this.freecamPosition).mul(CFrame.Angles(0, yawRad, 0));
+
+        this.freecamPosition = this.freecamPosition
+            .add(lookCFrame.LookVector.mul(-moveDir.Z * speed * dt))
+            .add(lookCFrame.RightVector.mul(moveDir.X * speed * dt))
+            .add(new Vector3(0, vertMove * speed * dt, 0));
+
+        this.camera.CFrame = new CFrame(this.freecamPosition)
+            .mul(CFrame.Angles(0, yawRad, 0))
+            .mul(CFrame.Angles(math.rad(this.pitch), 0, 0));
+
+        this.updateWindSound(dt);
+    }
+
     private update(dt: number) {
         const character = this.player.Character;
         if (!character) return;
@@ -265,9 +304,30 @@ export class FirstPersonLock {
 
         const isDead = this.player.GetAttribute("_dead") === true;
         if (isDead) {
-            this.updateDeathCamera(dt);
+            const role = this.player.GetAttribute("role") as string | undefined;
+            if (role === "Attacker") {
+                if (!this.freecamActive) {
+                    if (this.freecamDeathTime === 0) {
+                        this.freecamDeathTime = os.clock();
+                    }
+                    if (os.clock() - this.freecamDeathTime < 1) {
+                        this.updateDeathCamera(dt);
+                        return;
+                    }
+                    this.freecamActive = true;
+                    this.freecamPosition = this.camera.CFrame.Position;
+                }
+                this.updateFreecam(dt);
+            } else {
+                this.freecamActive = false;
+                this.freecamDeathTime = 0;
+                this.updateDeathCamera(dt);
+            }
             return;
         }
+
+        this.freecamActive = false;
+        this.freecamDeathTime = 0;
 
         const humanoid = character.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
         if (!humanoid) return;

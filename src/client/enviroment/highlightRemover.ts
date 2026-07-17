@@ -1,5 +1,4 @@
 import { Workspace, ReplicatedStorage } from "@rbxts/services";
-import Remotes from "shared/remotes";
 
 export class HighlightRemover {
 

@@ -1,7 +1,7 @@
 // client/FootstepsClient.ts
 import { Players, SoundService } from "@rbxts/services";
 import { FootstepSoundList } from "shared/configs/footstepdata";
-import { UpdateWalkSpeedRemote } from "shared/footstepRemote";
+import Remotes, { RemoteId } from "shared/remotes";
 
 export class FootstepsClient {
     private player = Players.LocalPlayer;
@@ -42,7 +42,7 @@ export class FootstepsClient {
 
         this.humanoid.GetPropertyChangedSignal("WalkSpeed").Connect(() => {
             if (this.humanoid) {
-                UpdateWalkSpeedRemote.FireServer(this.humanoid.WalkSpeed);
+                Remotes.Client.Get(RemoteId.updateWalkSpeed).SendToServer(this.humanoid.WalkSpeed);
             }
         });
 
@@ -83,10 +83,11 @@ export class FootstepsClient {
     private onRunning(speed: number) {
         if (!this.humanoid || !this.currentSound) return;
 
+        const isDead = this.player.GetAttribute("_dead") === true;
         const isMoving = this.humanoid.MoveDirection.Magnitude > 0;
         const isClimbing = this.humanoid.GetState() === Enum.HumanoidStateType.Climbing;
 
-        if (isMoving && speed > 0 && !isClimbing) {
+        if (isMoving && speed > 0 && !isClimbing && !isDead) {
             this.applySoundProperties();
             this.currentSound.Playing = true;
             this.currentSound.Looped = true;

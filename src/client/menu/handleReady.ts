@@ -1,8 +1,8 @@
 import { Workspace, Players, SoundService } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
-const ReadyUpRemote = Remotes.Client.Get("readyUp");
-const StartGameRemote = Remotes.Client.Get("startGame");
+const ReadyUpRemote = Remotes.Client.Get(RemoteId.readyUp);
+const StartGameRemote = Remotes.Client.Get(RemoteId.startGame);
 
 const parentPart = Workspace.WaitForChild("readyUp") as BasePart;
 const parentPartGui = parentPart.WaitForChild("SurfaceGui") as SurfaceGui;

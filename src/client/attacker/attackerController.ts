@@ -1,7 +1,7 @@
 import { Players, RunService, UserInputService, Workspace, SoundService } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
-const AnimStateRemote = Remotes.Client.Get("attackerAnimState");
+const AnimStateRemote = Remotes.Client.Get(RemoteId.attackerAnimState);
 
 const FOOTSTEP_SOUND_ID = "rbxassetid://121542193392069";
 
@@ -175,36 +175,38 @@ export class AttackerController {
 		});
 	}
 
-	private updateState() {
-		const charHum = this.charHumanoid;
-		const moving = charHum && charHum.Parent
-			? charHum.MoveDirection.Magnitude > 0.1
-			: false;
-		const sprinting = this.player.GetAttribute("_sprinting") === true;
+    private updateState() {
+        const isDead = this.player.GetAttribute("_dead") === true;
+        const charHum = this.charHumanoid;
+        const moving = !isDead && charHum && charHum.Parent
+            ? charHum.MoveDirection.Magnitude > 0.1
+            : false;
+        const sprinting = !isDead && this.player.GetAttribute("_sprinting") === true;
 
-		if (moving !== this.isMoving || sprinting !== this.isSprinting || this.isCrouching !== this.wasCrouching) {
-			this.isMoving = moving;
-			this.isSprinting = sprinting;
-			this.wasCrouching = this.isCrouching;
-			AnimStateRemote.SendToServer(moving, sprinting, this.isCrouching);
-		}
-	}
+        if (moving !== this.isMoving || sprinting !== this.isSprinting || this.isCrouching !== this.wasCrouching) {
+            this.isMoving = moving;
+            this.isSprinting = sprinting;
+            this.wasCrouching = this.isCrouching;
+            AnimStateRemote.SendToServer(moving, sprinting, this.isCrouching);
+        }
+    }
 	private wasCrouching = false;
 
-	private updateFootsteps() {
-		if (!this.footstepSound) return;
+    private updateFootsteps() {
+        if (!this.footstepSound) return;
 
-		const moving = this.charHumanoid && this.charHumanoid.Parent
-			? this.charHumanoid.MoveDirection.Magnitude > 0.1
-			: false;
+        const isDead = this.player.GetAttribute("_dead") === true;
+        const moving = !isDead && this.charHumanoid && this.charHumanoid.Parent
+            ? this.charHumanoid.MoveDirection.Magnitude > 0.1
+            : false;
 
-		if (moving && !this.footstepSound.IsPlaying) {
-			this.footstepSound.Playing = true;
-			this.footstepSound.Looped = true;
-		} else if (!moving && this.footstepSound.IsPlaying) {
-			this.footstepSound.Stop();
-		}
-	}
+        if (moving && !this.footstepSound.IsPlaying) {
+            this.footstepSound.Playing = true;
+            this.footstepSound.Looped = true;
+        } else if (!moving && this.footstepSound.IsPlaying) {
+            this.footstepSound.Stop();
+        }
+    }
 
 	private updateWindSound(dt: number) {
 		const parentFolder = SoundService.FindFirstChild("master") as SoundGroup | undefined;

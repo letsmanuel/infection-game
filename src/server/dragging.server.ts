@@ -1,14 +1,14 @@
 // server/PickupServer.ts
 import { Players, RunService, ServerStorage, Workspace } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
-const pickupRemote = Remotes.Server.Get("pickupObject");
-const dropRemote = Remotes.Server.Get("dropObject");
-const interactRemote = Remotes.Server.Get("interactObject");
-const heldChangedRemote = Remotes.Server.Get("objectHeldChanged");
-const confirmRemote = Remotes.Server.Get("confirmPlace");
-const cancelRemote = Remotes.Server.Get("cancelPlace");
-const placeGhostChanged = Remotes.Server.Get("placeGhostChanged");
+const pickupRemote = Remotes.Server.Get(RemoteId.pickupObject);
+const dropRemote = Remotes.Server.Get(RemoteId.dropObject);
+const interactRemote = Remotes.Server.Get(RemoteId.interactObject);
+const heldChangedRemote = Remotes.Server.Get(RemoteId.objectHeldChanged);
+const confirmRemote = Remotes.Server.Get(RemoteId.confirmPlace);
+const cancelRemote = Remotes.Server.Get(RemoteId.cancelPlace);
+const placeGhostChanged = Remotes.Server.Get(RemoteId.placeGhostChanged);
 
 const MAX_PICKUP_DISTANCE = 12;
 const BASE_WALK_SPEED = 16;

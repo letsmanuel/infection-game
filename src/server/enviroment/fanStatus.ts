@@ -1,5 +1,5 @@
 import { Workspace } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
 const RUN_TIME = 15;
 const COOLDOWN_TIME = 45;
@@ -8,7 +8,7 @@ export class FanStatus {
 
     private fanModeValue = Workspace.WaitForChild("fanMode") as StringValue;
     private fanCooldownValue = Workspace.WaitForChild("fanCooldown") as NumberValue;
-    private fanRemote = Remotes.Server.Get("startupFan");
+    private fanRemote = Remotes.Server.Get(RemoteId.startupFan);
     private fanLabel = Workspace.WaitForChild("Map").WaitForChild("House").WaitForChild("FunnyStuff").WaitForChild("fan").WaitForChild("Motor").WaitForChild("status").WaitForChild("TextLabel") as TextLabel;
 
     start() {

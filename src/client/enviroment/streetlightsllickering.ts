@@ -6,8 +6,8 @@ export class StreetLightsFlickerer {
         const streetLights = Workspace.WaitForChild("Map")
             .WaitForChild("Street")
             .WaitForChild("StreetLights").GetChildren();
-
-        while (true){
+        task.spawn(() => {
+                    while (true){
             task.wait(math.random(0.5,2));
 
             const randomLight = streetLights[math.random(0, streetLights.size() - 1)];
@@ -21,9 +21,11 @@ export class StreetLightsFlickerer {
             const originalEnabled = lightSource.Enabled;
             lightSource.Enabled = false;
             task.wait(math.random(0.1, 0.2));
-            print("flicker over")
             lightSource.Enabled = originalEnabled;
         }
+
+        })
+
     }
 
 }

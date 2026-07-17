@@ -1,14 +1,14 @@
 // client/PickupClient.ts
 import { Players, RunService, UserInputService, Workspace } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
-const pickupRemote = Remotes.Client.Get("pickupObject");
-const dropRemote = Remotes.Client.Get("dropObject");
-const interactRemote = Remotes.Client.Get("interactObject");
-const heldChangedRemote = Remotes.Client.Get("objectHeldChanged");
-const confirmRemote = Remotes.Client.Get("confirmPlace");
-const cancelRemote = Remotes.Client.Get("cancelPlace");
-const placeGhostChanged = Remotes.Client.Get("placeGhostChanged");
+const pickupRemote = Remotes.Client.Get(RemoteId.pickupObject);
+const dropRemote = Remotes.Client.Get(RemoteId.dropObject);
+const interactRemote = Remotes.Client.Get(RemoteId.interactObject);
+const heldChangedRemote = Remotes.Client.Get(RemoteId.objectHeldChanged);
+const confirmRemote = Remotes.Client.Get(RemoteId.confirmPlace);
+const cancelRemote = Remotes.Client.Get(RemoteId.cancelPlace);
+const placeGhostChanged = Remotes.Client.Get(RemoteId.placeGhostChanged);
 
 const MAX_LOOK_DISTANCE = 15;
 const PLACE_LERP_SPEED = 18;

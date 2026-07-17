@@ -1,8 +1,9 @@
-import { Players, SoundService, Workspace } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import { Players, SoundService, Workspace, ReplicatedStorage } from "@rbxts/services";
+import Remotes, { RemoteId } from "shared/remotes";
+import { DeliveryOptions } from "shared/configs/deliveryOptions";
 
-const checkAvailability = Remotes.Client.Get("checkOrderAvailability");
-const availabilityResponse = Remotes.Client.Get("orderAvailabilityResponse");
+const checkAvailability = Remotes.Client.Get(RemoteId.checkOrderAvailability);
+const availabilityResponse = Remotes.Client.Get(RemoteId.orderAvailabilityResponse);
 
 function playSound(sound?: Sound) {
     if (!sound) return;
@@ -23,6 +24,27 @@ export class OldShopHandler {
         const closeButton = oldFrame.WaitForChild("closeShop") as ImageButton;
         const purchaseButton = oldFrame.WaitForChild("purchaseNow") as ImageButton;
         const buttonsHolder = oldFrame.WaitForChild("itemsList") as ScrollingFrame;
+
+        const scrapAmount = ReplicatedStorage.WaitForChild("ScrapAmount") as IntValue;
+
+        const productById = new Map<string, (typeof DeliveryOptions.Products)[number]>();
+        for (const product of DeliveryOptions.Products) {
+            productById.set(product.id, product);
+        }
+
+        const updateCostLabels = () => {
+            for (const child of buttonsHolder.GetChildren()) {
+                if (!child.IsA("Frame")) continue;
+                const product = productById.get(child.Name);
+                if (!product) continue;
+                const costLabel = child.FindFirstChild("cost") as TextLabel | undefined;
+                if (costLabel) {
+                    costLabel.Text = `${product.scrapCost} Scrap`;
+                }
+            }
+        };
+
+        updateCostLabels();
 
         const phoneBeep = SoundService.FindFirstChild("phonebeep") as Sound | undefined;
         const callEnd = SoundService.FindFirstChild("callend") as Sound | undefined;
@@ -129,36 +151,51 @@ export class OldShopHandler {
 
         purchaseButton.MouseButton1Click.Connect(() => {
             if (selectedFrame) {
+                const product = productById.get(selectedFrame.Name);
+                if (product && scrapAmount.Value < product.scrapCost) {
+                    playSound(callFailure);
+                    return;
+                }
                 playSound(phoneBeep);
-                Remotes.Client.Get("placeOrder").SendToServer(selectedFrame.Name);
+                Remotes.Client.Get(RemoteId.placeOrder).SendToServer(selectedFrame.Name);
                 closeShop();
             }
         });
 
-        const updateLandlinePrompts = () => {
-            const role = player.GetAttribute("role") as string | undefined;
-            const isAttacker = role === "Attacker";
+        const isAttacker = () => player.GetAttribute("role") === "Attacker";
+
+        const handleLandlinePrompt = (prompt: ProximityPrompt) => {
+            prompt.Enabled = !isAttacker();
+
+            prompt.Triggered.Connect((playerWhoTriggered) => {
+                if (playerWhoTriggered !== player) return;
+                if (isAttacker()) return;
+                tryOpenShop();
+            });
+        };
+
+        const updateAllLandlinePrompts = () => {
             for (const child of Workspace.GetDescendants()) {
                 if (child.IsA("ProximityPrompt") && child.Name === "landlinePrompt") {
-                    child.Enabled = !isAttacker;
+                    child.Enabled = !isAttacker();
                 }
             }
         };
 
-        updateLandlinePrompts();
-
-        player.GetAttributeChangedSignal("role").Connect(() => {
-            updateLandlinePrompts();
-        });
-
         for (const child of Workspace.GetDescendants()) {
             if (child.IsA("ProximityPrompt") && child.Name === "landlinePrompt") {
-                child.Triggered.Connect((playerWhoTriggered) => {
-                    if (playerWhoTriggered === player) {
-                        tryOpenShop();
-                    }
-                });
+                handleLandlinePrompt(child);
             }
         }
+
+        Workspace.DescendantAdded.Connect((desc) => {
+            if (desc.IsA("ProximityPrompt") && desc.Name === "landlinePrompt") {
+                handleLandlinePrompt(desc);
+            }
+        });
+
+        player.GetAttributeChangedSignal("role").Connect(() => {
+            updateAllLandlinePrompts();
+        });
     }
 }

@@ -1,5 +1,4 @@
 import { Workspace, ReplicatedStorage, ServerStorage } from "@rbxts/services";
-import Remotes from "shared/remotes";
 
 const possibleCodeLocations = Workspace.WaitForChild("PossibleCodeLocations") as Folder;
 const runtimeFolder = ServerStorage.WaitForChild("Runtime") as Folder;

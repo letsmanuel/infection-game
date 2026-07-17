@@ -1,6 +1,8 @@
 import { sayStarted } from "shared/startupMessages";
 import { ContentProvider, Lighting, Players } from "@rbxts/services";
 import Remotes from "shared/remotes";
+import { Centurion } from "@rbxts/centurion";
+import { CenturionUI } from "@rbxts/centurion-ui";
 
 // GAME IMPORTS
 import { FirstPersonLock } from "./camera/firstPersonLock";
@@ -20,8 +22,11 @@ import { LightningEffectsAttacker } from "./attackereffects/lightningEffectsAtta
 import { AttackerSoundMuffler } from "./sounds/attackerSoundMuffler";
 import { StreetLightsFlickerer } from "./enviroment/streetlightsllickering";
 import { AttackerController } from "./attacker/attackerController";
+import { GameStateClient } from "./gameState";
+import { PowerOutageClient } from "./events/powerOutage";
 import "client/lootUI";
 import "client/enviroment/vanRenderer";
+import "client/commands/debugCommands";
 
 const LIGHTING_TIME = "20:00:00";
 Lighting.TimeOfDay = LIGHTING_TIME;
@@ -84,6 +89,28 @@ attackerSoundMuffler.start();
 
 const streetLightsFlickerer = new StreetLightsFlickerer();
 streetLightsFlickerer.start();
+
+print("street lights flickerer, go!")
+
+const gameStateClient = new GameStateClient();
+gameStateClient.start();
+
+print("game state client go.")
+
+const powerOutageClient = new PowerOutageClient();
+powerOutageClient.start();
+
+print("Power outage client go.")
+
+Centurion.client().start()
+	.then(() => {
+		CenturionUI.start(Centurion.client(), {
+			activationKeys: [Enum.KeyCode.F2],
+			hideOnLostFocus: false,
+		});
+		print("[Centurion] Client started");
+	})
+	.catch((err) => warn("Failed to start Centurion:", err));
 
 
 print(sayStarted("main.client.ts"));

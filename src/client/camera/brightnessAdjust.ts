@@ -1,8 +1,10 @@
 // BrightnessAdjustModule.ts
 import { Players, RunService, Workspace, Lighting } from "@rbxts/services";
+import Remotes, { RemoteId } from "shared/remotes";
 
 const BRIGHT_COLOR = Color3.fromRGB(68, 68, 68);
 const DARK_COLOR = Color3.fromRGB(44, 44, 44);
+const POWER_OUTAGE_COLOR = Color3.fromRGB(22, 22, 22);
 
 const ADJUST_DURATION = 10;
 const CHECK_INTERVAL = 0.2;
@@ -23,6 +25,8 @@ export class BrightnessAdjustModule {
     private heartbeatConn?: RBXScriptConnection;
     private lastCheck = 0;
 
+    private powerOutage = false;
+
     start() {
         this.indoorFolder = Workspace.WaitForChild("TriggerZones").WaitForChild("Indoor") as Folder;
         print("Indoor folder found:", this.indoorFolder.GetFullName());
@@ -36,6 +40,23 @@ export class BrightnessAdjustModule {
         this.wasIndoor = true;
         this.currentAmbient = BRIGHT_COLOR;
         Lighting.Ambient = this.currentAmbient;
+
+        Remotes.Client.Get(RemoteId.powerOutageMainStart).Connect(() => {
+            task.wait(0.2);
+            this.powerOutage = true;
+            Lighting.Ambient = POWER_OUTAGE_COLOR;
+            Lighting.EnvironmentDiffuseScale = 1;
+            Lighting.EnvironmentSpecularScale = 1;
+        });
+
+        Remotes.Client.Get(RemoteId.powerOutageState).Connect((active) => {
+            if (!active) {
+                this.powerOutage = false;
+                this.currentAmbient = BRIGHT_COLOR;
+                Lighting.Ambient = BRIGHT_COLOR;
+                this.adjusting = false;
+            }
+        });
 
         this.heartbeatConn = RunService.Heartbeat.Connect((dt) => {
             this.update(dt);
@@ -63,6 +84,8 @@ export class BrightnessAdjustModule {
     }
 
     private update(dt: number) {
+        if (this.powerOutage) return;
+
         this.lastCheck += dt;
         if (this.lastCheck >= CHECK_INTERVAL) {
             this.lastCheck = 0;

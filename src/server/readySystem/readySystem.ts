@@ -1,9 +1,11 @@
 import { Players, Workspace } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 import { spawnAllPlayers } from "server/spawnSystem";
+import { setGameState } from "server/gameState";
+import { GameState } from "shared/configs/gameState";
 
-const ReadyUpRemote = Remotes.Server.Get("readyUp");
-const StartGameRemote = Remotes.Server.Get("startGame");
+const ReadyUpRemote = Remotes.Server.Get(RemoteId.readyUp);
+const StartGameRemote = Remotes.Server.Get(RemoteId.startGame);
 
 
 const readyPlayers = new Set<Player>();
@@ -43,6 +45,7 @@ export class ReadySystem {
                 StartGameRemote.SendToAllPlayers("");
                 spawnAllPlayers();
                 this.started = true;
+                setGameState(GameState.Villa);
             }
         });
     }

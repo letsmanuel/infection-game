@@ -1,5 +1,5 @@
 import { Players, Workspace, ServerStorage, RunService } from "@rbxts/services";
-import Remotes from "shared/remotes";
+import Remotes, { RemoteId } from "shared/remotes";
 
 const RIG_MODEL_NAME = "playercontrolledRig";
 const RIG_Y_OFFSET = 1;
@@ -12,7 +12,7 @@ const SPRINT_ANIM_SPEED = 1.5;
 const DEATH_SINK_SPEED = 2;
 const DEATH_SINK_Y = -20;
 
-const AnimStateRemote = Remotes.Server.Get("attackerAnimState");
+const AnimStateRemote = Remotes.Server.Get(RemoteId.attackerAnimState);
 
 function makeCharacterInvisible(character: Model) {
 	for (const child of character.GetDescendants()) {
@@ -115,9 +115,12 @@ function spawnRigForPlayer(player: Player) {
 
 	const humanoid = character.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
 	if (humanoid) {
+		humanoid.BreakJointsOnDeath = false;
+
 		humanoid.Died.Connect(() => {
 			if (dead) return;
 			dead = true;
+			player.SetAttribute("_dead", true);
 
 			if (idleTrack) idleTrack.Stop();
 			if (walkTrack) walkTrack.Stop();

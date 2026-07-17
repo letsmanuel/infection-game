@@ -24,35 +24,29 @@ export class SprintModule {
 
     private attackerStartTime = 0;
 
+    private setupAttacker = () => {
+        const isAttacker = this.player.GetAttribute("role") === "Attacker";
+        if (isAttacker && this.humanoid) {
+            this.attackerStartTime = os.clock();
+            this.humanoid.WalkSpeed = ATTACKER_START_SPEED;
+        } else if (!isAttacker && this.humanoid) {
+            this.humanoid.WalkSpeed = WALK_SPEED;
+        }
+    };
+
     start() {
         this.player.SetAttribute("_sprinting", false);
 
-        const setupAttacker = () => {
-            const isAttacker = this.player.GetAttribute("role") === "Attacker";
-            print(`[Sprint] setupAttacker | role=${this.player.GetAttribute("role")} isAttacker=${isAttacker} hasHumanoid=${this.humanoid !== undefined}`);
-            if (isAttacker && this.humanoid) {
-                this.attackerStartTime = os.clock();
-                this.humanoid.WalkSpeed = ATTACKER_START_SPEED;
-                print(`[Sprint] ATTACKER START ramp | startTime=${this.attackerStartTime} walkSpeed=${ATTACKER_START_SPEED} humanoidHealth=${this.humanoid.Health}`);
-            } else if (!isAttacker && this.humanoid) {
-                this.humanoid.WalkSpeed = WALK_SPEED;
-                print(`[Sprint] RUNNER setup | walkSpeed=${WALK_SPEED}`);
-            }
-        };
-
         const setup = (char: Model) => {
-            print(`[Sprint] CharacterAdded setup | charName=${char.Name}`);
             this.humanoid = char.WaitForChild("Humanoid") as Humanoid;
-            print(`[Sprint] Humanoid found | health=${this.humanoid.Health}`);
-            setupAttacker();
+            this.setupAttacker();
         };
 
         if (this.player.Character) setup(this.player.Character);
         this.charAddedConn = this.player.CharacterAdded.Connect(setup);
 
         this.player.GetAttributeChangedSignal("role").Connect(() => {
-            print(`[Sprint] role changed | newRole=${this.player.GetAttribute("role")}`);
-            setupAttacker();
+            this.setupAttacker();
         });
 
         this.inputBeganConn = UserInputService.InputBegan.Connect((input, processed) => {
@@ -84,6 +78,14 @@ export class SprintModule {
 
         if (this.player.GetAttribute("_stunned") === true) {
             this.humanoid.WalkSpeed = STUN_SPEED;
+            return;
+        }
+
+        const isMoving = this.humanoid.MoveDirection.Magnitude > 0.1;
+
+        if (!isMoving) {
+            this.attackerStartTime = os.clock();
+            this.humanoid.WalkSpeed = ATTACKER_START_SPEED;
             return;
         }
 

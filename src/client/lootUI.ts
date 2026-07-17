@@ -38,12 +38,12 @@ function updateLabels() {
 	const vitaminAmount = ReplicatedStorage.FindFirstChild("VitaminAmount") as IntValue | undefined;
 
 	const label = getScrapLabel();
-	if (label && scrapAmount) label.Text = `Scrap: ${scrapAmount.Value}`;
+	if (label && scrapAmount) label.Text = `${scrapAmount.Value}`;
 
 	const vitFrame = getVitaminFrame();
 	if (vitFrame && vitaminAmount) {
 		const vitLabel = vitFrame.FindFirstChild("TextLabel") as TextLabel | undefined;
-		if (vitLabel) vitLabel.Text = `Adrenaline: ${vitaminAmount.Value}`;
+		if (vitLabel) vitLabel.Text = `${vitaminAmount.Value}`;
 	}
 }
 
