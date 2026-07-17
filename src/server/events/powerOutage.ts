@@ -117,12 +117,14 @@ export class PowerOutageController {
 
 		setPowerOutageActive(true);
 		Remotes.Server.Get(RemoteId.powerOutageState).SendToAllPlayers(true);
-		
-		for (const player of Players.GetPlayers()) {
-			if (player.GetAttribute("role") !== "Attacker") {
-				Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "What was that? Weird...");
+		task.spawn(() => {
+			task.wait(3)
+			for (const player of Players.GetPlayers()) {
+				if (player.GetAttribute("role") !== "Attacker") {
+					Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "What was that? Weird...");
+				}
 			}
-		}
+		});
 
 		preOutageSound.Play();
 		print("[PowerOutage] Playing preOutage, starting warning flicker");
@@ -145,12 +147,15 @@ export class PowerOutageController {
 
 			particleEnergy.Enabled = true;
 			print("[PowerOutage] Particle emitter enabled");
-
-			for (const player of Players.GetPlayers()) {
-				if (player.GetAttribute("role") !== "Attacker") {
-					Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should check the breaker box in the basement...");
+			
+			task.spawn(() => {
+				task.wait(1.5)
+				for (const player of Players.GetPlayers()) {
+					if (player.GetAttribute("role") !== "Attacker") {
+						Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should check the breaker box in the basement...");
+					}
 				}
-			}
+			})
 
 			Remotes.Server.Get(RemoteId.powerOutageMainStart).SendToAllPlayers();
 			print("[PowerOutage] Main phase broadcast sent to clients");
