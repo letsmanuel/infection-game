@@ -1,5 +1,5 @@
 // client/PickupClient.ts
-import { Players, RunService, UserInputService, Workspace } from "@rbxts/services";
+import { Players, RunService, UserInputService, Workspace, ReplicatedStorage } from "@rbxts/services";
 import Remotes, { RemoteId } from "shared/remotes";
 
 const pickupRemote = Remotes.Client.Get(RemoteId.pickupObject);
@@ -13,11 +13,14 @@ const placeGhostChanged = Remotes.Client.Get(RemoteId.placeGhostChanged);
 const MAX_LOOK_DISTANCE = 15;
 const PLACE_LERP_SPEED = 18;
 
+const highlightTemplate = ReplicatedStorage.WaitForChild("stuff").WaitForChild("Highlight") as Highlight;
+
 export class PickupClient {
     private player = Players.LocalPlayer;
     private camera = Workspace.CurrentCamera!;
 
     private highlightedTarget?: Instance;
+    private highlightClone?: Highlight;
 
     private locallyHeldTarget?: Instance;
     private remoteHeldTargets = new Map<Player, Instance>();
@@ -215,7 +218,14 @@ export class PickupClient {
     }
 
     private updateLookTarget() {
+        if (this.player.GetAttribute("role") === "Attacker") {
+            this.clearHighlight();
+            this.highlightedTarget = undefined;
+            return;
+        }
+
         if (this.locallyHeldTarget || this.inPlaceMode) {
+            this.clearHighlight();
             this.highlightedTarget = undefined;
             return;
         }
@@ -223,11 +233,29 @@ export class PickupClient {
         const target = this.getLookTarget();
 
         if (!target || target.GetAttribute("pickupable") !== true || this.isHeldByAnyone(target)) {
+            this.clearHighlight();
             this.highlightedTarget = undefined;
             return;
         }
 
-        this.highlightedTarget = target;
+        if (this.highlightedTarget !== target) {
+            this.clearHighlight();
+            this.highlightedTarget = target;
+            this.applyHighlight(target);
+        }
+    }
+
+    private applyHighlight(target: Instance) {
+        if (this.highlightClone) return;
+        this.highlightClone = highlightTemplate.Clone();
+        this.highlightClone.Parent = target;
+    }
+
+    private clearHighlight() {
+        if (this.highlightClone) {
+            this.highlightClone.Destroy();
+            this.highlightClone = undefined;
+        }
     }
 
     private isHeldByAnyone(target: Instance): boolean {
@@ -255,5 +283,6 @@ export class PickupClient {
         this.inputConn?.Disconnect();
         this.heldChangedConn?.Disconnect();
         this.placeGhostConn?.Disconnect();
+        this.clearHighlight();
     }
 }

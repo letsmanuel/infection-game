@@ -46,6 +46,16 @@ export class ReadySystem {
                 spawnAllPlayers();
                 this.started = true;
                 setGameState(GameState.Villa);
+                task.wait(1)
+                task.spawn(() => {
+                    for (const player of Players.GetPlayers()) {
+                        if (player.GetAttribute("role") !== "Attacker") {
+                            Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should go inside, there may be monsters out here...");
+                        }else{
+                           Remotes.Server.Get(RemoteId.giveClientHint).SendToPlayer(player, "I should find the humans around here..."); 
+                        }
+                    }
+                });
             }
         });
     }
