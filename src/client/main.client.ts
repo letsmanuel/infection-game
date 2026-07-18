@@ -30,6 +30,7 @@ import "client/lootUI";
 import "client/enviroment/vanRenderer";
 import "client/enviroment/aiCollision";
 import "client/commands/debugCommands";
+import { AIMonsterClient } from "./aiMonster/aiMonsterClient";
 
 const LIGHTING_TIME = "20:00:00";
 Lighting.TimeOfDay = LIGHTING_TIME;
@@ -107,6 +108,11 @@ const powerOutageClient = new PowerOutageClient();
 powerOutageClient.start();
 
 print("Power outage client go.")
+
+const aiMonsterClient = new AIMonsterClient();
+aiMonsterClient.start();
+
+print("AI monster client go.")
 
 const giveHintHandler = new GiveHintHandler();
 giveHintHandler.start();

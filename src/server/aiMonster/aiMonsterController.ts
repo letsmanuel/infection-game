@@ -6,7 +6,6 @@ const RIG_MODEL_NAME = "playercontrolledRig";
 const RIG_Y_OFFSET = 1;
 const IDLE_ANIM_ID = "rbxassetid://92701505225015";
 const WALK_ANIM_ID = "rbxassetid://117442281858803";
-const FOOTSTEP_SOUND_ID = "rbxassetid://121542193392069";
 
 const START_SPEED = 10;
 const RAMP_TIME = 10;
@@ -23,6 +22,9 @@ const WANDER_STOP_MAX = 3;
 const WAYPOINT_REACHED_DISTANCE = 6;
 const STUCK_TIME = 2;
 const STUCK_MOVE_THRESHOLD = 1;
+const KILL_RANGE = 5;
+const KILL_COOLDOWN = 1.5;
+
 
 let waypoints: Attachment[] = [];
 let powerOutageWaypoints: Attachment[] = [];
@@ -102,7 +104,6 @@ class AIMonster {
 	rigAnimator: Animator;
 	idleTrack?: AnimationTrack;
 	walkTrack?: AnimationTrack;
-	footstepSound: Sound;
 
 	state: AIState = "WANDER";
 	currentWaypoint?: Vector3;
@@ -126,6 +127,9 @@ class AIMonster {
 
 	stuckCheckPos = new Vector3();
 	stuckCheckTime = 0;
+	lastPosition = new Vector3();
+	stopFrames = 0;
+	lastKillTime = 0;
 
 	private destroyed = false;
 	private updateConn?: RBXScriptConnection;
@@ -167,7 +171,8 @@ class AIMonster {
 			}
 		}
 
-		// EXACT same animation setup as player attacker rig
+		this.visualRig.SetAttribute("isAIRig", true);
+
 		let animController = this.visualRig.FindFirstChildOfClass("AnimationController");
 		if (!animController) {
 			animController = new Instance("AnimationController");
@@ -186,8 +191,6 @@ class AIMonster {
 		if (this.idleTrack) {
 			this.idleTrack.Looped = true;
 			this.idleTrack.Priority = Enum.AnimationPriority.Idle;
-		} else {
-			warn(`[AIMonster] FAILED to load idle anim ${IDLE_ANIM_ID}`);
 		}
 
 		const walkAnim = new Instance("Animation");
@@ -196,16 +199,7 @@ class AIMonster {
 		if (this.walkTrack) {
 			this.walkTrack.Looped = true;
 			this.walkTrack.Priority = Enum.AnimationPriority.Movement;
-		} else {
-			warn(`[AIMonster] FAILED to load walk anim ${WALK_ANIM_ID}`);
 		}
-
-		// Footstep sound (same ID as player attacker)
-		this.footstepSound = new Instance("Sound");
-		this.footstepSound.SoundId = FOOTSTEP_SOUND_ID;
-		this.footstepSound.Volume = 0.6;
-		this.footstepSound.Looped = true;
-		this.footstepSound.Parent = this.rigRootPart;
 
 		const startWP = getRandomWaypoint(false);
 		if (startWP) {
@@ -221,8 +215,9 @@ class AIMonster {
 	start() {
 		if (this.idleTrack) {
 			this.idleTrack.Play();
-			print("[AIMonster] Idle animation started");
 		}
+
+		this.lastPosition = this.charRootPart.Position;
 
 		if (this.currentWaypoint) {
 			this.charHumanoid.MoveTo(this.currentWaypoint);
@@ -269,16 +264,27 @@ class AIMonster {
 			case "RETREAT": this.updateRetreat(dt); break;
 		}
 
-		const moving = this.charHumanoid.MoveDirection.Magnitude > 0.1;
+		this.checkKillNearbyPlayers();
+
+		const currentPos = this.charRootPart.Position;
+		const posDelta = currentPos.sub(this.lastPosition).Magnitude;
+		if (posDelta > 0.01) {
+			this.stopFrames = 0;
+		} else {
+			this.stopFrames = math.min(this.stopFrames + 1, 10);
+		}
+		const moving = this.stopFrames < 5;
+		this.lastPosition = currentPos;
 		this.setAnimState(moving);
 		this.rampSpeed(dt, moving);
-		this.updateFootstepSound(moving);
+		this.rigRootPart.SetAttribute("_aiMoving", this.isWalking);
+		this.rigRootPart.SetAttribute("_aiWalkSpeed", this.charHumanoid.WalkSpeed);
 		this.checkStuck();
 
 		if (this.debugLogTimer >= 3) {
 			this.debugLogTimer = 0;
 			const pos = this.charRootPart.Position;
-			print(`[AIMonster] state=${this.state} pos=${"%.1f".format(pos.X)},${"%.1f".format(pos.Y)},${"%.1f".format(pos.Z)} moving=${moving} wpt=${this.currentWaypoint ? `${"%.1f".format(this.currentWaypoint.X)},${"%.1f".format(this.currentWaypoint.Z)}` : "none"} pathIdx=${this.currentPathIndex}/${this.pathWaypoints.size()} anim=${this.walkTrack?.IsPlaying}`);
+			print(`[AIMonster] state=${this.state} pos=${"%.1f".format(pos.X)},${"%.1f".format(pos.Y)},${"%.1f".format(pos.Z)} moving=${moving} delta=${"%.2f".format(posDelta)} speed=${"%.1f".format(this.charHumanoid.WalkSpeed)} wpt=${this.currentWaypoint ? `${"%.1f".format(this.currentWaypoint.X)},${"%.1f".format(this.currentWaypoint.Z)}` : "none"} pathIdx=${this.currentPathIndex}/${this.pathWaypoints.size()}`);
 		}
 	}
 
@@ -418,6 +424,33 @@ class AIMonster {
 
 		this.stuckCheckPos = this.charRootPart.Position;
 		this.stuckCheckTime = now;
+	}
+
+	private checkKillNearbyPlayers() {
+		const now = os.clock();
+		if (now - this.lastKillTime < KILL_COOLDOWN) return;
+
+		const rootPos = this.charRootPart.Position;
+		for (const player of Players.GetPlayers()) {
+			const role = player.GetAttribute("role") as string | undefined;
+			if (role !== "Runner") continue;
+			if (player.GetAttribute("_dead") === true) continue;
+
+			const char = player.Character;
+			if (!char) continue;
+			const playerRoot = char.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+			if (!playerRoot) continue;
+
+			const dist = playerRoot.Position.sub(rootPos).Magnitude;
+			if (dist < KILL_RANGE) {
+				const humanoid = char.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
+				if (humanoid && humanoid.Health > 0) {
+					humanoid.Health = 0;
+					this.lastKillTime = now;
+					print(`[AIMonster] Killed ${player.Name} (dist=${"%.1f".format(dist)})`);
+				}
+			}
+		}
 	}
 
 	private updateWander(dt: number) {
@@ -639,14 +672,6 @@ class AIMonster {
 		const elapsed = os.clock() - this.walkStartTime;
 		if (elapsed >= RAMP_TIME) { this.charHumanoid.WalkSpeed = MAX_SPEED; return; }
 		this.charHumanoid.WalkSpeed = START_SPEED + (MAX_SPEED - START_SPEED) * (elapsed / RAMP_TIME);
-	}
-
-	private updateFootstepSound(moving: boolean) {
-		if (moving && !this.footstepSound.IsPlaying) {
-			this.footstepSound.Play();
-		} else if (!moving && this.footstepSound.IsPlaying) {
-			this.footstepSound.Stop();
-		}
 	}
 
 	private setupDebugVisuals() {

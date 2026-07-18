@@ -1,5 +1,5 @@
 export const AIDebugConfig = {
-	enabled: true,
+	enabled: false,
 	showHighlight: true,
 	showStatus: true,
 	showTargetWaypoint: true,
